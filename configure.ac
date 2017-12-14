@@ -81,6 +81,8 @@ LIBDRM_NOUVEAU_REQUIRED=2.4.66
 LIBDRM_FREEDRENO_REQUIRED=2.4.74
 LIBDRM_ETNAVIV_REQUIRED=2.4.82
 
+CLRXAMDBIN_REQUIRED=0.1.5
+
 dnl Versions for external dependencies
 DRI2PROTO_REQUIRED=2.8
 GLPROTO_REQUIRED=1.4.14
@@ -1253,6 +1255,11 @@ AC_ARG_ENABLE([opencl],
          [enable OpenCL library @<:@default=disabled@:>@])],
    [enable_opencl="$enableval"],
    [enable_opencl=no])
+AC_ARG_ENABLE([comp-bridge],
+    [AS_HELP_STRING([--enable-comp-bridge],
+        [enable OpenCL Compiler Bridge @<:@default=disabled@:>@])],
+    [enable_comp_bridge="$enableval"],
+    [enable_comp_bridge=no])
 AC_ARG_ENABLE([opencl_icd],
    [AS_HELP_STRING([--enable-opencl-icd],
           [Build an OpenCL ICD library to be loaded by an ICD implementation
@@ -1438,6 +1445,16 @@ PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
 if test "x$have_libdrm" = xyes; then
     DEFINES="$DEFINES -DHAVE_LIBDRM"
 fi
+
+CLRXAMDBIN_LIBDIR=
+# Check for CLRXAmdBin
+PKG_CHECK_MODULES([CLRXAMDBIN], [clrxamdbin >= $CLRXAMDBIN_REQUIRED],
+                [have_clrxamdbin=yes], [have_clrxamdbin=no])
+if test "x$have_clrxamdbin" = xyes; then
+    DEFINES="$DEFINES -DHAVE_CLRXAMDBIN=1"
+    CLRXAMDBIN_LIBDIR=`echo $CLRXAMDBIN_LIBS|sed -e "s/-L\(\S*\).*/\\1/"`
+fi
+AC_SUBST(CLRXAMDBIN_LIBDIR)
 
 require_libdrm() {
     if test "x$have_libdrm" != xyes; then
@@ -2304,6 +2321,10 @@ if test "x$enable_opencl" = xyes; then
     CLANG_RESOURCE_DIR=$CLANG_LIBDIR/clang/${LLVM_VERSION}
     AS_IF([test ! -f "$CLANG_RESOURCE_DIR/include/stddef.h"],
         [AC_MSG_ERROR([Could not find clang internal header stddef.h in $CLANG_RESOURCE_DIR Use --with-clang-libdir to specify the correct path to the clang libraries.])])
+    
+    if test "x$enable_comp_bridge" = xyes; then
+        DEFINES="$DEFINES -DENABLE_COMP_BRIDGE=1"
+    fi
 fi
 AM_CONDITIONAL(HAVE_CLOVER, test "x$enable_opencl" = xyes)
 AM_CONDITIONAL(HAVE_CLOVER_ICD, test "x$enable_opencl_icd" = xyes)

@@ -4,6 +4,7 @@ lib_LTLIBRARIES = lib@OPENCL_LIBNAME@.la
 
 lib@OPENCL_LIBNAME@_la_LDFLAGS = \
 	$(LLVM_LDFLAGS) \
+	-Wl,-rpath -Wl,$(CLRXAMDBIN_LIBDIR) \
 	-no-undefined \
 	-version-number @OPENCL_VERSION@:0 \
 	$(GC_SECTIONS) \
@@ -22,6 +23,7 @@ lib@OPENCL_LIBNAME@_la_LIBADD = \
 	$(EXPAT_LIBS) \
 	$(LIBELF_LIBS) \
 	$(DLOPEN_LIBS) \
+	$(CLRXAMDBIN_LIBS) \
 	-lclangCodeGen \
 	-lclangFrontendTool \
 	-lclangFrontend \

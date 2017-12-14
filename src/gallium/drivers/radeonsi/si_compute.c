@@ -534,7 +534,9 @@ static void si_setup_user_sgprs_co_v2(struct si_context *sctx,
 
 		/* Upload dispatch ptr */
 		memset(&dispatch, 0, sizeof(dispatch));
-
+#ifdef ENABLE_COMP_BRIDGE
+		dispatch.setup = info->work_dim;
+#endif
 		dispatch.workgroup_size_x = info->block[0];
 		dispatch.workgroup_size_y = info->block[1];
 		dispatch.workgroup_size_z = info->block[2];
@@ -827,7 +829,9 @@ static void si_launch_grid(
 
 	if ((program->input_size ||
             program->ir_type == PIPE_SHADER_IR_NATIVE) &&
-           unlikely(!si_upload_compute_input(sctx, code_object, info))) {
+           unlikely(!si_upload_compute_input(sctx, code_object, info)))
+	{
+		
 		return;
 	}
 
