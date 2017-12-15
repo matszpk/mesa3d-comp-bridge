@@ -2322,9 +2322,12 @@ if test "x$enable_opencl" = xyes; then
     AS_IF([test ! -f "$CLANG_RESOURCE_DIR/include/stddef.h"],
         [AC_MSG_ERROR([Could not find clang internal header stddef.h in $CLANG_RESOURCE_DIR Use --with-clang-libdir to specify the correct path to the clang libraries.])])
     
+    CLOVER_DEFINES=
     if test "x$enable_comp_bridge" = xyes; then
         DEFINES="$DEFINES -DENABLE_COMP_BRIDGE=1"
+        CLOVER_DEFINES="$CLOVER_DEFINES -DENABLE_COMP_BRIDGE=1"
     fi
+    AC_SUBST(CLOVER_DEFINES)
 fi
 AM_CONDITIONAL(HAVE_CLOVER, test "x$enable_opencl" = xyes)
 AM_CONDITIONAL(HAVE_CLOVER_ICD, test "x$enable_opencl_icd" = xyes)

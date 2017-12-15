@@ -42,7 +42,11 @@ namespace {
 }
 
 device::device(clover::platform &platform, pipe_loader_device *ldev) :
-   platform(platform), ldev(ldev) {
+   platform(platform), ldev(ldev) 
+#ifdef ENABLE_COMP_BRIDGE
+   , bridge(comp_bridge::none), amdocl2_device(nullptr)
+#endif
+   {
    pipe = pipe_loader_create_screen(ldev);
    if (!pipe || !pipe->get_param(pipe, PIPE_CAP_COMPUTE)) {
       if (pipe)
@@ -268,3 +272,10 @@ std::string
 device::device_clc_version() const {
     return "1.1";
 }
+
+#ifdef ENABLE_COMP_BRIDGE
+void device::set_comp_bridge(clover::comp_bridge _bridge, cl_device_id device) {
+    bridge = _bridge;
+    amdocl2_device = device;
+}
+#endif

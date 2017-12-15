@@ -207,6 +207,15 @@ namespace clover {
             return desc(o);
          }, os);
    }
+
+
+#ifdef ENABLE_COMP_BRIDGE
+enum comp_bridge {
+   none,
+   amdocl2,
+   rocm
+};
+#endif
 }
 
 struct _cl_context :
@@ -235,5 +244,5 @@ struct _cl_command_queue :
 
 struct _cl_sampler :
    public clover::descriptor<clover::sampler, _cl_sampler> {};
-
+   
 #endif

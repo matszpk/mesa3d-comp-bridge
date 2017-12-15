@@ -74,7 +74,11 @@ clover::GetPlatformInfo(cl_platform_id d_platform, cl_platform_info param,
       break;
 
    case CL_PLATFORM_EXTENSIONS:
-      buf.as_string() = "cl_khr_icd";
+      buf.as_string() = "cl_khr_icd"
+#ifdef ENABLE_COMP_BRIDGE
+            " cl_ext_comp_bridge"
+#endif
+      ;
       break;
 
    case CL_PLATFORM_ICD_SUFFIX_KHR:

@@ -25,6 +25,9 @@
 
 #include <set>
 #include <vector>
+#ifdef ENABLE_COMP_BRIDGE
+#include "CL/cl.h"
+#endif
 
 #include "core/object.hpp"
 #include "core/format.hpp"
@@ -91,9 +94,21 @@ namespace clover {
 
       clover::platform &platform;
 
+#ifdef ENABLE_COMP_BRIDGE
+      void set_comp_bridge(clover::comp_bridge _bridge, cl_device_id device);
+      
+      comp_bridge get_comp_bridge() const
+      { return bridge; }
+      cl_device_id get_amdocl2_device() const
+      { return amdocl2_device; }
+#endif
    private:
       pipe_screen *pipe;
       pipe_loader_device *ldev;
+#ifdef ENABLE_COMP_BRIDGE
+      clover::comp_bridge bridge;
+      cl_device_id amdocl2_device;
+#endif
    };
 }
 

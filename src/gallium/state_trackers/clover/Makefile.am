@@ -53,6 +53,8 @@ libclllvm_la_SOURCES = $(LLVM_SOURCES)
 libclover_la_CXXFLAGS = \
 	-std=c++11 \
 	$(CLOVER_STD_OVERRIDE) \
+	$(CLOVER_DEFINES) \
+	$(CLRXAMDBIN_CFLAGS) \
 	$(VISIBILITY_CXXFLAGS)
 
 libclover_la_LIBADD = \

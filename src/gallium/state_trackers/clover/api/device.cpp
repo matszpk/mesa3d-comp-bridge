@@ -330,6 +330,13 @@ clGetDeviceInfo(cl_device_id d_dev, cl_device_info param,
       break;
 
    case CL_DEVICE_EXTENSIONS:
+#ifdef ENABLE_COMP_BRIDGE
+      if (dev.get_comp_bridge() == comp_bridge::amdocl2) {
+         auto handlers = dev.platform.get_amdocl2_handlers();
+         return handlers->fn_clGetDeviceInfo(dev.get_amdocl2_device(),
+                                 param, size, r_buf, r_size);
+      }
+#endif
       buf.as_string() =
          "cl_khr_byte_addressable_store"
          " cl_khr_global_int32_base_atomics"
@@ -379,6 +386,13 @@ clGetDeviceInfo(cl_device_id d_dev, cl_device_info param,
       break;
 
    case CL_DEVICE_OPENCL_C_VERSION:
+#ifdef ENABLE_COMP_BRIDGE
+      if (dev.get_comp_bridge() == comp_bridge::amdocl2) {
+         auto handlers = dev.platform.get_amdocl2_handlers();
+         return handlers->fn_clGetDeviceInfo(dev.get_amdocl2_device(),
+                                 param, size, r_buf, r_size);
+      }
+#endif
       buf.as_string() = "OpenCL C " + dev.device_clc_version() + " ";
       break;
 
