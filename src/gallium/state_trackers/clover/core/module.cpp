@@ -22,10 +22,16 @@
 
 #include <type_traits>
 #include <iostream>
+#ifdef ENABLE_COMP_BRIDGE
+#include <CLRX/amdbin/AmdCL2Binaries.h>
+#endif
 
 #include "core/module.hpp"
 
 using namespace clover;
+#ifdef ENABLE_COMP_BRIDGE
+using namespace CLRX;
+#endif
 
 namespace {
    template<typename T, typename = void>
@@ -225,4 +231,11 @@ namespace clover {
       _proc(sz, *this);
       return sz;
    }
+   
+#ifdef ENABLE_COMP_BRIDGE
+   module
+   module::create_from_amdocl2_binary(const CLRX::AmdCL2MainGPUBinary64* binary) {
+       return {};
+   }
+#endif
 }
