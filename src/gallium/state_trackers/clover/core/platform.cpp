@@ -149,7 +149,8 @@ static const char* amdocl2_funcs_names[] = { "clGetPlatformIDs", "clGetDeviceInf
 #endif
 
 
-static std::string trimSpaces(const std::string& s) {
+static std::string
+trimSpaces(const std::string& s) {
    std::string::size_type pos = s.find_first_not_of(" \n\t\r\v\f");
    if (pos == std::string::npos)
       return "";
@@ -157,7 +158,8 @@ static std::string trimSpaces(const std::string& s) {
    return s.substr(pos, endPos+1-pos);
 }
 
-void platform::load_amdocl2() {
+void
+platform::load_amdocl2() {
    std::string amdocl2_cur_path = amdocl2_path;
    if (amdocl2_cur_path.empty()) {
       // just find
@@ -214,7 +216,8 @@ void platform::load_amdocl2() {
 }
 
 template<typename T>
-static void parse_bridge_value(std::map<T, comp_bridge>& map,
+static void
+parse_bridge_value(std::map<T, comp_bridge>& map,
                                T param, const std::string& invalue,
                                int line_no)
 {
@@ -229,7 +232,8 @@ static void parse_bridge_value(std::map<T, comp_bridge>& map,
    map[param] = bridge;
 }
 
-void platform::load_config_from_file(const char* filename) try {
+void
+platform::load_config_from_file(const char* filename) try {
    std::ifstream ifs(filename);
    int line_no = 1;
    while (ifs) {
@@ -277,7 +281,8 @@ void platform::load_config_from_file(const char* filename) try {
    return;
 }
 
-void platform::load_config() {
+void
+platform::load_config() {
    std::string configfilename(SYSCONFDIR);
    configfilename += "/clover_compbridge";
    load_config_from_file(configfilename.c_str());

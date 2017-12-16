@@ -25,6 +25,11 @@
 
 #include <vector>
 #include <string>
+#ifdef ENABLE_COMP_BRIDGE
+namespace CLRX {
+    class AmdCL2MainGPUBinary64;
+};
+#endif
 
 namespace clover {
    struct module {
@@ -119,6 +124,10 @@ namespace clover {
       void serialize(std::ostream &os) const;
       static module deserialize(std::istream &is);
       size_t size() const;
+#ifdef ENABLE_COMP_BRIDGE
+      static module create_from_amdocl2_binary(
+                    const CLRX::AmdCL2MainGPUBinary64* binary);
+#endif
 
       std::vector<symbol> syms;
       std::vector<section> secs;

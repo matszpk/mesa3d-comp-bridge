@@ -274,8 +274,9 @@ device::device_clc_version() const {
 }
 
 #ifdef ENABLE_COMP_BRIDGE
-void device::set_comp_bridge(clover::comp_bridge _bridge, cl_device_id device) {
-    bridge = _bridge;
-    amdocl2_device = device;
+void
+device::set_comp_bridge(clover::comp_bridge _bridge, cl_device_id device) {
+   ridge = _bridge;
+   amdocl2_device = device;
 }
 #endif

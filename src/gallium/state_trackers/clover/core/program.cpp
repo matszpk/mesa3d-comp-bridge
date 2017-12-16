@@ -120,7 +120,8 @@ program::link(const ref_vector<device> &devs, const std::string &opts,
 }
 
 #ifdef ENABLE_COMP_BRIDGE
-void program::build_amdocl2(const ref_vector<device> &devs, const std::string &opts) {
+void
+program::build_amdocl2(const ref_vector<device> &devs, const std::string &opts) {
    if (has_source) {
       _devices = devs;
       for (auto &dev : devs) {
