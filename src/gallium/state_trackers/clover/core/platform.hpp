@@ -91,6 +91,12 @@ namespace clover {
                       size_t                /* param_value_size */,
                       void *                /* param_value */,
                       size_t *              /* param_value_size_ret */) CL_API_SUFFIX__VERSION_1_0;
+      typedef CL_API_ENTRY cl_int CL_API_CALL
+      (*tp_clGetProgramInfo)(cl_program         /* program */,
+                 cl_program_info    /* param_name */,
+                 size_t             /* param_value_size */,
+                 void *             /* param_value */,
+                 size_t *           /* param_value_size_ret */) CL_API_SUFFIX__VERSION_1_0;
    };
 #endif
    
@@ -116,10 +122,12 @@ namespace clover {
             cl_funcs::tp_clGetContextInfo fn_clGetContextInfo;
             cl_funcs::tp_clReleaseContext fn_clReleaseContext;
             cl_funcs::tp_clCreateProgramWithSource fn_clCreateProgramWithSource;
+            cl_funcs::tp_clGetProgramInfo fn_clGetProgramInfo;
             cl_funcs::tp_clGetProgramBuildInfo fn_clGetProgramBuildInfo;
+            cl_funcs::tp_clBuildProgram fn_clBuildProgram;
             cl_funcs::tp_clReleaseProgram fn_clReleaseProgram;
          };
-         void* funcs[8];
+         void* funcs[10];
       };
       
       cl_context get_amdocl2_context() const

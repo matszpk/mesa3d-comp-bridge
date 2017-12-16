@@ -210,7 +210,7 @@ namespace clover {
 
 
 #ifdef ENABLE_COMP_BRIDGE
-enum comp_bridge {
+enum class comp_bridge {
    none,
    amdocl2,
    rocm

@@ -184,8 +184,14 @@ clBuildProgram(cl_program d_prog, cl_uint num_devs,
    validate_build_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
    if (prog.has_source) {
+#ifdef ENABLE_COMP_BRIDGE
+      prog.compile(devs, opts, {}, true);
+      prog.link(devs, opts, { prog }, true);
+      prog.build_amdocl2(devs, opts);
+#else
       prog.compile(devs, opts);
       prog.link(devs, opts, { prog });
+#endif
    }
 
    return CL_SUCCESS;
@@ -347,7 +353,12 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
       break;
 
    case CL_PROGRAM_BINARY_SIZES:
-      buf.as_vector<size_t>() = map([&](const device &dev) {
+      buf.as_vector<size_t>() = map([&](const device &dev) -> size_t {
+#ifdef ENABLE_COMP_BRIDGE
+            if (dev.get_comp_bridge()==comp_bridge::amdocl2 &&
+                  prog.build(dev).amdocl2_binary)
+               return prog.build(dev).amdocl2_binary->getSize();
+#endif
             return prog.build(dev).binary.size();
          },
          prog.devices());
@@ -355,6 +366,14 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
 
    case CL_PROGRAM_BINARIES:
       buf.as_matrix<unsigned char>() = map([&](const device &dev) {
+#ifdef ENABLE_COMP_BRIDGE
+            if (dev.get_comp_bridge()==comp_bridge::amdocl2 &&
+                  prog.build(dev).amdocl2_binary) {
+               const auto& b = prog.build(dev);
+               return std::string(b.amdocl2_code.get(),
+                        b.amdocl2_code.get()+b.amdocl2_binary->getSize());
+            }
+#endif
             std::stringbuf bin;
             std::ostream s(&bin);
             prog.build(dev).binary.serialize(s);

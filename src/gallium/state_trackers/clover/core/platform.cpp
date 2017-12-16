@@ -31,8 +31,9 @@
 #include "core/platform.hpp"
 
 using namespace clover;
-
+#ifdef ENABLE_COMP_BRIDGE
 using namespace CLRX;
+#endif
 
 #ifdef ENABLE_COMP_BRIDGE
 static GPUDeviceType get_clrx_dev_type_from_dev_name(const std::string& deviceName) {
@@ -139,7 +140,8 @@ platform::platform() : adaptor_range(evals(), devs) {
 
 static const char* amdocl2_funcs_names[] = { "clGetPlatformIDs", "clGetDeviceInfo",
    "clCreateContextFromType", "clGetContextInfo", "clReleaseContext",
-   "clCreateProgramWithSource", "clGetProgramBuildInfo", "clReleaseProgram"
+   "clCreateProgramWithSource", "clGetProgramInfo", "clGetProgramBuildInfo",
+   "clBuildProgram", "clReleaseProgram"
 };
 
 #ifndef CL_CONTEXT_OFFLINE_DEVICES_AMD
@@ -167,7 +169,7 @@ void platform::load_amdocl2() {
    amdocl2_dynlib.load(amdocl2_cur_path.c_str(), DYNLIB_NOW);
    
    amdocl2_funcs.reset(new amdocl2_funcs_struct);
-   for(int i = 0; i < 8; i++)
+   for(int i = 0; i < sizeof(amdocl2_funcs_struct)/sizeof(void*); i++)
       amdocl2_funcs->funcs[i] = amdocl2_dynlib.getSymbol(amdocl2_funcs_names[i]);
    
    cl_platform_id platform;
