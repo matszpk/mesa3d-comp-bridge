@@ -35,48 +35,6 @@ using namespace clover;
 using namespace CLRX;
 #endif
 
-#ifdef ENABLE_COMP_BRIDGE
-static GPUDeviceType get_clrx_dev_type_from_dev_name(const std::string& deviceName) {
-   GPUDeviceType devType = GPUDeviceType::CAPE_VERDE;
-   const char* sptr = ::strstr(deviceName.c_str(), "(AMD ");
-   const char* devNamePtr = deviceName.c_str();
-   // if form 'AMD Radeon xxx (AMD CODENAME /...)
-   if (sptr != nullptr) // if found 'AMD ';
-      devNamePtr = sptr+5;
-   else {
-      // if form 'AMD CODENAME (....
-      sptr = ::strstr(deviceName.c_str(), "AMD ");
-      if (sptr != nullptr) // if found 'AMD ';
-         devNamePtr = sptr+4;
-   }
-   const char* devNameEnd = devNamePtr;
-   while (isAlnum(*devNameEnd)) devNameEnd++;
-   std::string devNameTmp(devNamePtr, devNameEnd);
-   try
-   { devType = getGPUDeviceTypeFromName(devNameTmp.c_str()); }
-   catch(const GPUIdException& ex) {
-      const char* sptr = deviceName.c_str();
-      while(true) {
-         sptr = ::strchr(sptr, '(');
-         if (sptr == nullptr)
-            throw; // nothing found
-         devNamePtr = sptr+1;
-         // try again
-         devNameEnd = devNamePtr;
-         while (isAlnum(*devNameEnd)) devNameEnd++;
-         std::string devNameTmp(devNamePtr, devNameEnd);
-         try {
-            devType = getGPUDeviceTypeFromName(devNameTmp.c_str());
-            break;
-         }
-         catch(const GPUIdException& ex)
-         { sptr++; /* skip previous '(' */ }
-      }
-   }
-   return devType;
-}
-#endif
-
 platform::platform() : adaptor_range(evals(), devs) {
 #ifdef ENABLE_COMP_BRIDGE
    amdocl2_context = nullptr;
@@ -95,12 +53,7 @@ platform::platform() : adaptor_range(evals(), devs) {
             devs.push_back(create<device>(*this, ldev));
             auto& dev = devs.back();
             auto dname = dev().device_name();
-            GPUDeviceType devtype = GPUDeviceType::CAPE_VERDE;
-            try {
-               devtype = get_clrx_dev_type_from_dev_name(dname);
-            } catch(const std::exception& ex) {
-               std::cerr << "Can't determine device type" << std::endl;
-            }
+            GPUDeviceType devtype = dev().get_device_type();
             // check whether to load amdocl2 library
             GPUArchitecture arch = getGPUArchitectureFromDeviceType(devtype);
             auto ait = arch_bridge_map.find(arch);

@@ -180,7 +180,7 @@ program::build_amdocl2(const ref_vector<device> &devs, const std::string &opts) 
             
             std::unique_ptr<AmdCL2MainGPUBinary64> amdocl2_binary(
                         new AmdCL2MainGPUBinary64(size, binary_ptr));
-            _builds[&dev] = { amdocl2_binary, opts, logvec.data() };
+            _builds[&dev] = { amdocl2_binary, dev.get_device_type(), opts, logvec.data() };
             binary.release();
             
          } catch(const std::exception& ex) {

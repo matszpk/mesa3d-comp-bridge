@@ -26,6 +26,7 @@
 #include <map>
 #ifdef ENABLE_COMP_BRIDGE
 #include <memory>
+#include <CLRX/utils/GPUId.h>
 #include <CLRX/amdbin/AmdCL2Binaries.h>
 #endif
 
@@ -75,9 +76,10 @@ namespace clover {
          build(const module &m = {}, const std::string &opts = {},
                const std::string &log = {}) : binary(m), opts(opts), log(log) {}
 #ifdef ENABLE_COMP_BRIDGE
-         build(std::unique_ptr<CLRX::AmdCL2MainGPUBinary64>& m,
+         build(std::unique_ptr<CLRX::AmdCL2MainGPUBinary64>& m, CLRX::GPUDeviceType devtype,
                const std::string &opts = {}, const std::string &log = {}) :
                   opts(opts), log(log), amdocl2_binary(nullptr) {
+            binary = module::create_from_amdocl2_binary(m.get(), devtype);
             amdocl2_code.reset(m->getBinaryCode());
             amdocl2_binary.reset(m.release());
          }

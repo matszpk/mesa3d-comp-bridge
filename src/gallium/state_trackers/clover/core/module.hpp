@@ -26,6 +26,7 @@
 #include <vector>
 #include <string>
 #ifdef ENABLE_COMP_BRIDGE
+#include <CLRX/utils/GPUId.h>
 namespace CLRX {
     class AmdCL2MainGPUBinary64;
 };
@@ -126,7 +127,7 @@ namespace clover {
       size_t size() const;
 #ifdef ENABLE_COMP_BRIDGE
       static module create_from_amdocl2_binary(
-                    const CLRX::AmdCL2MainGPUBinary64* binary);
+                    const CLRX::AmdCL2MainGPUBinary64* binary, CLRX::GPUDeviceType devtype);
 #endif
 
       std::vector<symbol> syms;

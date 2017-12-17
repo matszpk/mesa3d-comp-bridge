@@ -26,6 +26,7 @@
 #include <set>
 #include <vector>
 #ifdef ENABLE_COMP_BRIDGE
+#include <CLRX/utils/GPUId.h>
 #include "CL/cl.h"
 #endif
 
@@ -101,11 +102,14 @@ namespace clover {
       { return bridge; }
       cl_device_id get_amdocl2_device() const
       { return amdocl2_device; }
+      CLRX::GPUDeviceType get_device_type() const
+      { return devtype; }
 #endif
    private:
       pipe_screen *pipe;
       pipe_loader_device *ldev;
 #ifdef ENABLE_COMP_BRIDGE
+      CLRX::GPUDeviceType devtype;
       clover::comp_bridge bridge;
       cl_device_id amdocl2_device;
 #endif

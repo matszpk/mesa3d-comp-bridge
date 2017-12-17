@@ -21,12 +21,19 @@
 //
 
 #include <unistd.h>
+#ifdef ENABLE_COMP_BRIDGE
+#include <iostream>
+#include <string>
+#endif
 #include "core/device.hpp"
 #include "core/platform.hpp"
 #include "pipe/p_screen.h"
 #include "pipe/p_state.h"
 
 using namespace clover;
+#ifdef ENABLE_COMP_BRIDGE
+using namespace CLRX;
+#endif
 
 namespace {
    template<typename T>
@@ -41,10 +48,53 @@ namespace {
    }
 }
 
+#ifdef ENABLE_COMP_BRIDGE
+static GPUDeviceType get_clrx_dev_type_from_dev_name(const std::string& deviceName) {
+   GPUDeviceType devType = GPUDeviceType::CAPE_VERDE;
+   const char* sptr = ::strstr(deviceName.c_str(), "(AMD ");
+   const char* devNamePtr = deviceName.c_str();
+   // if form 'AMD Radeon xxx (AMD CODENAME /...)
+   if (sptr != nullptr) // if found 'AMD ';
+      devNamePtr = sptr+5;
+   else {
+      // if form 'AMD CODENAME (....
+      sptr = ::strstr(deviceName.c_str(), "AMD ");
+      if (sptr != nullptr) // if found 'AMD ';
+         devNamePtr = sptr+4;
+   }
+   const char* devNameEnd = devNamePtr;
+   while (isAlnum(*devNameEnd)) devNameEnd++;
+   std::string devNameTmp(devNamePtr, devNameEnd);
+   try
+   { devType = getGPUDeviceTypeFromName(devNameTmp.c_str()); }
+   catch(const GPUIdException& ex) {
+      const char* sptr = deviceName.c_str();
+      while(true) {
+         sptr = ::strchr(sptr, '(');
+         if (sptr == nullptr)
+            throw; // nothing found
+         devNamePtr = sptr+1;
+         // try again
+         devNameEnd = devNamePtr;
+         while (isAlnum(*devNameEnd)) devNameEnd++;
+         std::string devNameTmp(devNamePtr, devNameEnd);
+         try {
+            devType = getGPUDeviceTypeFromName(devNameTmp.c_str());
+            break;
+         }
+         catch(const GPUIdException& ex)
+         { sptr++; /* skip previous '(' */ }
+      }
+   }
+   return devType;
+}
+#endif
+
 device::device(clover::platform &platform, pipe_loader_device *ldev) :
    platform(platform), ldev(ldev) 
 #ifdef ENABLE_COMP_BRIDGE
-   , bridge(comp_bridge::none), amdocl2_device(nullptr)
+   , devtype(GPUDeviceType::CAPE_VERDE), bridge(comp_bridge::none),
+     amdocl2_device(nullptr)
 #endif
    {
    pipe = pipe_loader_create_screen(ldev);
@@ -53,6 +103,14 @@ device::device(clover::platform &platform, pipe_loader_device *ldev) :
          pipe->destroy(pipe);
       throw error(CL_INVALID_DEVICE);
    }
+#ifdef ENABLE_COMP_BRIDGE
+   try {
+      devtype = get_clrx_dev_type_from_dev_name(device_name());
+   } catch(const std::exception& ex) {
+      std::cerr << "Can't determine device type" << std::endl;
+      throw error(CL_INVALID_DEVICE);
+   }
+#endif
 }
 
 device::~device() {
