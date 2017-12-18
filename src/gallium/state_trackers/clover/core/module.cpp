@@ -230,10 +230,10 @@ struct gallium_argtype_info {
 
 static const gallium_argtype_info gallium_to_amdocl2_argtype_table[] = {
    { GalliumArgType::SCALAR, false, 1, 4 }, // VOID
-   { GalliumArgType::SCALAR, false, 1, 4 }, // UCHAR
-   { GalliumArgType::SCALAR, true, 1, 4 }, // CHAR
-   { GalliumArgType::SCALAR, false, 2, 4 }, // USHORT
-   { GalliumArgType::SCALAR, true, 2, 4 }, // SHORT
+   { GalliumArgType::SCALAR, false, 1, 1 }, // UCHAR
+   { GalliumArgType::SCALAR, true, 1, 1 }, // CHAR
+   { GalliumArgType::SCALAR, false, 2, 2 }, // USHORT
+   { GalliumArgType::SCALAR, true, 2, 2 }, // SHORT
    { GalliumArgType::SCALAR, false, 4, 4 }, // UINT
    { GalliumArgType::SCALAR, true, 4, 4 }, // INT
    { GalliumArgType::SCALAR, false, 8, 8 }, // ULONG
