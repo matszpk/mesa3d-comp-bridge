@@ -316,8 +316,8 @@ convert_amdocl2_arginfo_to_gallium_arginfo(const AmdKernelArg& arg_info) {
             gtype.size, gtype.size, gtype.align };
    if (arg_info.ptrSpace == KernelPtrSpace::LOCAL)
       garg.type = GalliumArgType::LOCAL;
-   else if (arg_info.ptrSpace == KernelPtrSpace::CONSTANT)
-      garg.type = GalliumArgType::CONSTANT;
+   /*else if (arg_info.ptrSpace == KernelPtrSpace::CONSTANT)
+      garg.type = GalliumArgType::CONSTANT;*/
    return garg;
 }
 #endif
