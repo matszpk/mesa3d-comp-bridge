@@ -169,16 +169,6 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    for (auto &marg : margs) {
       switch (marg.semantic) {
       case module::argument::general:
-#ifdef ENABLE_COMP_BRIDGE
-         if (kern.program().is_amdocl2_binary(q->device()) && explicit_arg_index<3) {
-            // skip first argument for filling first AMDOCL kernel args
-            auto karg = kernel::argument::create(marg);
-            ulong zero = 0;
-            karg->set(sizeof(cl_ulong), &zero);
-            karg->bind(*this, marg);
-         }
-         else
-#endif
          (*(explicit_arg++))->bind(*this, marg);
          explicit_arg_index++;
          break;
@@ -198,6 +188,20 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
             arg->set(sizeof(x), &x);
             arg->bind(*this, marg);
          }
+#ifdef ENABLE_COMP_BRIDGE
+         if (kern.program().is_amdocl2_binary(q->device()) && explicit_arg_index<3) {
+            // skip first argument for filling first AMDOCL kernel args
+            for(int i = 0; i < 3; i++) {
+               typedef typename module::argument::type ttype;
+               typedef typename module::argument::ext_type exttype;
+               module::argument(ttype::scalar, 4, 4, 4, exttype::zero_ext);
+               auto karg = kernel::argument::create(marg);
+               ulong zero = 0;
+               karg->set(sizeof(cl_ulong), &zero);
+               karg->bind(*this, marg);
+            }
+         }
+#endif
          break;
       }
       case module::argument::image_size: {

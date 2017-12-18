@@ -382,9 +382,9 @@ namespace clover {
          
          gkernel.argInfos.push_back({GalliumArgType::SCALAR, false,
                   GalliumArgSemantic::GRID_OFFSET, 4, 4, 4 });
-         for (int k = 0; k < 3; k++) // fill up unused args
+         /*for (int k = 0; k < 3; k++) // fill up unused args
             gkernel.argInfos.push_back({GalliumArgType::SCALAR, false,
-                     GalliumArgSemantic::GENERAL, 4, 4, 4 });
+                     GalliumArgSemantic::GENERAL, 4, 4, 4 });*/
          // convert arguments
          std::transform(kinfo.argInfos.begin(), kinfo.argInfos.end(), 
                std::back_inserter(gkernel.argInfos),
