@@ -164,13 +164,43 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    auto margs = find(name_equals(kern.name()), m.syms).args;
    auto msec = find(type_equals(module::section::text_executable), m.secs);
    auto explicit_arg = kern._args.begin();
-   int explicit_arg_index = 0;
+   
+#ifdef ENABLE_COMP_BRIDGE
+   const bool is_amdocl2_binary = kern.program().is_amdocl2_binary(q->device());
+   if (is_amdocl2_binary) {
+      for (auto &marg : margs) {
+         switch (marg.semantic) {
+         case module::argument::grid_offset: {
+            for (cl_ulong x : pad_vector(*q, grid_offset, 0)) {
+               auto arg = argument::create(marg);
+
+               arg->set(marg.size, &x);
+               arg->bind(*this, marg);
+            }
+            }
+            break;
+         default:
+            break;
+         }
+      }
+      // skip first argument for filling first AMDOCL kernel args
+      for(int i = 0; i < 3; i++) {
+         typedef typename module::argument::type ttype;
+         typedef typename module::argument::ext_type exttype;
+         module::argument marg(ttype::scalar, 8, 8, 8, exttype::zero_ext);
+         auto karg = kernel::argument::create(marg);
+         ulong zero = 0;
+         karg->set(sizeof(cl_ulong), &zero);
+         karg->bind(*this, marg);
+      }
+   }
+   
+#endif
 
    for (auto &marg : margs) {
       switch (marg.semantic) {
       case module::argument::general:
          (*(explicit_arg++))->bind(*this, marg);
-         explicit_arg_index++;
          break;
 
       case module::argument::grid_dimension: {
@@ -182,26 +212,16 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
          break;
       }
       case module::argument::grid_offset: {
+#ifdef ENABLE_COMP_BRIDGE
+         if (!is_amdocl2_binary)
+            // ignore first grid_offset if amdocl2 binary
+#endif
          for (cl_uint x : pad_vector(*q, grid_offset, 0)) {
             auto arg = argument::create(marg);
 
             arg->set(sizeof(x), &x);
             arg->bind(*this, marg);
          }
-#ifdef ENABLE_COMP_BRIDGE
-         if (kern.program().is_amdocl2_binary(q->device()) && explicit_arg_index<3) {
-            // skip first argument for filling first AMDOCL kernel args
-            for(int i = 0; i < 3; i++) {
-               typedef typename module::argument::type ttype;
-               typedef typename module::argument::ext_type exttype;
-               module::argument(ttype::scalar, 4, 4, 4, exttype::zero_ext);
-               auto karg = kernel::argument::create(marg);
-               ulong zero = 0;
-               karg->set(sizeof(cl_ulong), &zero);
-               karg->bind(*this, marg);
-            }
-         }
-#endif
          break;
       }
       case module::argument::image_size: {

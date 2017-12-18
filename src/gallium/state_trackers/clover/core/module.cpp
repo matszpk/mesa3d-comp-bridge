@@ -380,15 +380,13 @@ namespace clover {
          gkernel.progInfo[4].address = ULEV(0x00000008U);
          gkernel.progInfo[4].value = 0; // ?
          
-         gkernel.argInfos.push_back({GalliumArgType::SCALAR, false,
-                  GalliumArgSemantic::GRID_OFFSET, 4, 4, 4 });
-         /*for (int k = 0; k < 3; k++) // fill up unused args
-            gkernel.argInfos.push_back({GalliumArgType::SCALAR, false,
-                     GalliumArgSemantic::GENERAL, 4, 4, 4 });*/
          // convert arguments
-         std::transform(kinfo.argInfos.begin(), kinfo.argInfos.end(), 
+         std::transform(kinfo.argInfos.begin()+6, kinfo.argInfos.end(), 
                std::back_inserter(gkernel.argInfos),
                         convert_amdocl2_arginfo_to_gallium_arginfo);
+         
+         gkernel.argInfos.push_back({GalliumArgType::SCALAR, false,
+                  GalliumArgSemantic::GRID_OFFSET, 8, 8, 8 });
          
          ginput.kernels.push_back(gkernel);
       }
@@ -403,6 +401,15 @@ namespace clover {
             gmod = module::deserialize(istream);
          }
       }
+      /*for (const auto& sym: gmod.syms) {
+         std::cout << "sym: " << sym.name << "\n";
+         for (const auto& arg: sym.args)
+            std::cout << "  arg: sem=" << int(arg.semantic) << ", "
+                  "type=" << int(arg.type) << ", ext=" << int(arg.ext_type) << ", " <<
+                  arg.size << ", " << arg.target_size << ", " <<
+                  arg.target_align << "\n";
+      }
+      std::cout.flush();*/
       return gmod;
    }
 #endif
