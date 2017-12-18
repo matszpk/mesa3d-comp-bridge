@@ -164,11 +164,23 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    auto margs = find(name_equals(kern.name()), m.syms).args;
    auto msec = find(type_equals(module::section::text_executable), m.secs);
    auto explicit_arg = kern._args.begin();
+   int explicit_arg_index = 0;
 
    for (auto &marg : margs) {
       switch (marg.semantic) {
       case module::argument::general:
+#ifdef ENABLE_COMP_BRIDGE
+         if (kern.program().is_amdocl2_binary(q->device()) && explicit_arg_index<3) {
+            // skip first argument for filling first AMDOCL kernel args
+            auto karg = kernel::argument::create(marg);
+            ulong zero = 0;
+            karg->set(sizeof(cl_ulong), &zero);
+            karg->bind(*this, marg);
+         }
+         else
+#endif
          (*(explicit_arg++))->bind(*this, marg);
+         explicit_arg_index++;
          break;
 
       case module::argument::grid_dimension: {

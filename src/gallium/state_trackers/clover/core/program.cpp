@@ -195,6 +195,11 @@ program::build_amdocl2(const ref_vector<device> &devs, const std::string &opts) 
       }
    }
 }
+
+bool
+program::is_amdocl2_binary(const device &dev) {
+   return dev.get_comp_bridge()==comp_bridge::amdocl2 && build(dev).amdocl2_binary;
+}
 #endif
 
 const std::string &

@@ -355,8 +355,7 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
    case CL_PROGRAM_BINARY_SIZES:
       buf.as_vector<size_t>() = map([&](const device &dev) -> size_t {
 #ifdef ENABLE_COMP_BRIDGE
-            if (dev.get_comp_bridge()==comp_bridge::amdocl2 &&
-                  prog.build(dev).amdocl2_binary)
+            if (prog.is_amdocl2_binary(dev))
                return prog.build(dev).amdocl2_binary->getSize();
 #endif
             return prog.build(dev).binary.size();
@@ -367,8 +366,7 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
    case CL_PROGRAM_BINARIES:
       buf.as_matrix<unsigned char>() = map([&](const device &dev) {
 #ifdef ENABLE_COMP_BRIDGE
-            if (dev.get_comp_bridge()==comp_bridge::amdocl2 &&
-                  prog.build(dev).amdocl2_binary) {
+            if (prog.is_amdocl2_binary(dev)) {
                const auto& b = prog.build(dev);
                return std::string(b.amdocl2_code.get(),
                         b.amdocl2_code.get()+b.amdocl2_binary->getSize());

@@ -96,6 +96,10 @@ namespace clover {
          std::unique_ptr<CLRX::AmdCL2MainGPUBinary64> amdocl2_binary;
 #endif
       };
+      
+#ifdef ENABLE_COMP_BRIDGE
+      bool is_amdocl2_binary(const device &dev);
+#endif
 
       const build &build(const device &dev) const;
 
