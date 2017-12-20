@@ -59,6 +59,10 @@ namespace clover {
          std::vector<pipe_surface *> resources;
          std::vector<pipe_resource *> g_buffers;
          std::vector<size_t> g_handles;
+#ifdef ENABLE_COMP_BRIDGE
+        std::vector<std::pair<size_t, size_t>> g_structures;
+        std::vector<uint8_t> extra_input;
+#endif
          size_t mem_local;
 
       private:

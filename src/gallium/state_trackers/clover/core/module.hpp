@@ -70,6 +70,9 @@ namespace clover {
             image3d_rd,
             image3d_wr,
             sampler
+#ifdef ENABLE_COMP_BRIDGE
+            , structure
+#endif
          };
 
          enum ext_type {

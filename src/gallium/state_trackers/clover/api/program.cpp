@@ -20,6 +20,11 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#ifndef ENABLE_COMP_BRIDGE
+#include <cstring>
+#include <CLRX/amdbin/AmdCL2Binaries.h>
+#include <CLRX/utils/Containers.h>
+#endif
 #include "api/util.hpp"
 #include "core/program.hpp"
 #include "util/u_debug.h"
@@ -27,6 +32,9 @@
 #include <sstream>
 
 using namespace clover;
+#ifdef ENABLE_COMP_BRIDGE
+using namespace CLRX;
+#endif
 
 namespace {
    void
@@ -91,15 +99,48 @@ clCreateProgramWithBinary(cl_context d_ctx, cl_uint n,
       throw error(CL_INVALID_DEVICE);
 
    // Deserialize the provided binaries,
-   std::vector<std::pair<cl_int, module>> result = map(
-      [](const unsigned char *p, size_t l) -> std::pair<cl_int, module> {
+#ifdef ENABLE_COMP_BRIDGE
+   Array<std::unique_ptr<AmdCL2MainGPUBinary64>> amdocl2binptrs(devs.size());
+   Array<std::unique_ptr<unsigned char[]>> amdocl2codeptrs(devs.size());
+   std::vector<std::pair<cl_int, program::multi_module>> result;
+   for (size_t i = 0; i < devs.size(); i++) {
+      size_t l = lengths[i];
+      const unsigned char* p = binaries[i];
+      if (!p || !l) {
+          result.push_back({ CL_INVALID_VALUE, program::multi_module() });
+          continue;
+      }
+
+      try {
+         if (devs[i].get_comp_bridge() == comp_bridge::amdocl2 && isAmdCL2Binary(l, p)) {
+            std::unique_ptr<unsigned char[]> amdocl2_code(new unsigned char[l]);
+            ::memcpy(amdocl2_code.get(), p, l);
+            std::unique_ptr<AmdCL2MainGPUBinary64> amdocl2_bin(
+                  new AmdCL2MainGPUBinary64(l, (cxbyte*)amdocl2_code.get()));
+            result.push_back({ CL_SUCCESS,
+                  program::multi_module(module(), amdocl2_bin.get()) });
+            amdocl2binptrs[i].reset(amdocl2_bin.release());
+            amdocl2codeptrs[i].reset(amdocl2_code.release());
+            continue;
+         }
+         std::stringbuf bin( { (char*)p, l } );
+         std::istream s(&bin);
+         result.push_back({ CL_SUCCESS,
+            program::multi_module(module::deserialize(s), nullptr) });
+
+      } catch (std::istream::failure &e) {
+         result.push_back({ CL_INVALID_BINARY, program::multi_module() });
+      }
+   }
+#else
+   std::vector<std::<cl_int, module>> result = map(
+      [](const unsigned char *p, size_t l, const device& d) -> std::pair<cl_int, module> {
          if (!p || !l)
             return { CL_INVALID_VALUE, {} };
 
          try {
             std::stringbuf bin( { (char*)p, l } );
             std::istream s(&bin);
-
             return { CL_SUCCESS, module::deserialize(s) };
 
          } catch (std::istream::failure &e) {
@@ -108,6 +149,7 @@ clCreateProgramWithBinary(cl_context d_ctx, cl_uint n,
       },
       range(binaries, n),
       range(lengths, n));
+#endif
 
    // update the status array,
    if (r_status)
@@ -121,7 +163,14 @@ clCreateProgramWithBinary(cl_context d_ctx, cl_uint n,
 
    // initialize a program object with them.
    ret_error(r_errcode, CL_SUCCESS);
+#ifdef ENABLE_COMP_BRIDGE
+   auto prog = new program(ctx, devs, map(values(), result));
+   for (auto& v: amdocl2binptrs) v.release();
+   for (auto& v: amdocl2codeptrs) v.release();
+   return prog;
+#else
    return new program(ctx, devs, map(values(), result));
+#endif
 
 } catch (error &e) {
    ret_error(r_errcode, e);

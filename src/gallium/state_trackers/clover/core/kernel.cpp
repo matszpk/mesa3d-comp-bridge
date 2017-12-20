@@ -164,6 +164,9 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    auto margs = find(name_equals(kern.name()), m.syms).args;
    auto msec = find(type_equals(module::section::text_executable), m.secs);
    auto explicit_arg = kern._args.begin();
+#ifdef ENABLE_COMP_BRIDGE
+   size_t structures_size = 0;
+#endif
    
 #ifdef ENABLE_COMP_BRIDGE
    const bool is_amdocl2_binary = kern.program().is_amdocl2_binary(q->device());
@@ -255,6 +258,28 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
       }
    }
 
+#ifdef ENABLE_COMP_BRIDGE
+   size_t input_size = input.size();
+   if (structures_size) {
+      // align before
+      input_size = (input_size + 63) & ~size_t(63);
+      input_size += structures_size;
+   }
+   // Create a new compute state if anything changed.
+   if (!st || q != _q ||
+       cs.req_local_mem != mem_local ||
+       cs.req_input_mem != input_size) {
+      if (st)
+         _q->pipe->delete_compute_state(_q->pipe, st);
+
+      cs.ir_type = q->device().ir_format();
+      cs.prog = &(msec.data[0]);
+      cs.req_local_mem = mem_local;
+      cs.req_input_mem = input_size;
+   
+      st = q->pipe->create_compute_state(q->pipe, &cs);
+   }
+#else
    // Create a new compute state if anything changed.
    if (!st || q != _q ||
        cs.req_local_mem != mem_local ||
@@ -266,8 +291,10 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
       cs.prog = &(msec.data[0]);
       cs.req_local_mem = mem_local;
       cs.req_input_mem = input.size();
+   
       st = q->pipe->create_compute_state(q->pipe, &cs);
    }
+#endif
 
    return st;
 }

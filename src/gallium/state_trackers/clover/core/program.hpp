@@ -43,11 +43,21 @@ namespace clover {
          evals, const std::vector<intrusive_ref<device>> &> device_range;
 
    public:
+#ifdef ENABLE_COMP_BRIDGE
+      typedef std::pair<module, CLRX::AmdCL2MainGPUBinary64*> multi_module;
+#endif
+      
       program(clover::context &ctx,
               const std::string &source);
+#ifdef ENABLE_COMP_BRIDGE
+      program(clover::context &ctx,
+              const ref_vector<device> &devs = {},
+              const std::vector<multi_module> &binaries = {});
+#else
       program(clover::context &ctx,
               const ref_vector<device> &devs = {},
               const std::vector<module> &binaries = {});
+#endif
 
       program(const program &prog) = delete;
       program &

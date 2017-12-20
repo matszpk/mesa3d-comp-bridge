@@ -37,6 +37,29 @@ program::program(clover::context &ctx, const std::string &source) :
    has_source(true), context(ctx), _source(source), _kernel_ref_counter(0) {
 }
 
+#ifdef ENABLE_COMP_BRIDGE
+program::program(clover::context &ctx,
+                 const ref_vector<device> &devs,
+                 const std::vector<multi_module> &binaries) :
+   has_source(false), context(ctx),
+   _devices(devs), _kernel_ref_counter(0) {
+   for_each([&](device &dev, const multi_module &bin) {
+         if (bin.second) {
+            std::unique_ptr<AmdCL2MainGPUBinary64> mb(bin.second);
+            try {
+               _builds[&dev] = { mb, dev.get_device_type() };
+            } catch(...) {
+               mb.release();
+               throw;
+            }
+            mb.release();
+         }
+         else
+            _builds[&dev] = { bin.first };
+      },
+      devs, binaries);
+}
+#else
 program::program(clover::context &ctx,
                  const ref_vector<device> &devs,
                  const std::vector<module> &binaries) :
@@ -47,6 +70,7 @@ program::program(clover::context &ctx,
       },
       devs, binaries);
 }
+#endif
 
 void
 program::compile(const ref_vector<device> &devs, const std::string &opts,

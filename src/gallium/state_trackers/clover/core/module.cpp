@@ -24,7 +24,10 @@
 #include <iostream>
 #ifdef ENABLE_COMP_BRIDGE
 #include <algorithm>
+#include <string>
 #include <iterator>
+#include <vector>
+#include <map>
 #include <cstring>
 #include <CLRX/amdbin/AmdCL2Binaries.h>
 #include <CLRX/amdbin/Commons.h>
@@ -309,6 +312,11 @@ static const gallium_argtype_info gallium_to_amdocl2_argtype_table[] = {
 
 static GalliumArgInfo
 convert_amdocl2_arginfo_to_gallium_arginfo(const AmdKernelArg& arg_info) {
+   if (arg_info.argType == KernelArgType::STRUCTURE)
+      // this is not real structure (will be modifier to real later after deserialization)
+      return { GalliumArgType::GLOBAL, false, GalliumArgSemantic::GENERAL,
+            0, 0, 256 };
+   
    const auto& gtype = gallium_to_amdocl2_argtype_table[cxint(arg_info.argType)];
    if (gtype.size == 0)
       throw Exception("Unsupported type");
@@ -316,8 +324,6 @@ convert_amdocl2_arginfo_to_gallium_arginfo(const AmdKernelArg& arg_info) {
             gtype.size, gtype.size, gtype.align };
    if (arg_info.ptrSpace == KernelPtrSpace::LOCAL)
       garg.type = GalliumArgType::LOCAL;
-   /*else if (arg_info.ptrSpace == KernelPtrSpace::CONSTANT)
-      garg.type = GalliumArgType::CONSTANT;*/
    return garg;
 }
 #endif
@@ -350,6 +356,8 @@ namespace clover {
       size_t hsatext_size = ULEV(shdr.sh_size);
       const cxbyte* hsatext = inner.getBinaryCode() + ULEV(shdr.sh_offset);
       
+      std::map<CString, std::vector<size_t>> structsMap;
+      
       GalliumInput ginput{};
       ginput.is64BitElf = true;
       ginput.isLLVM390 = true;
@@ -380,6 +388,30 @@ namespace clover {
          gkernel.progInfo[4].address = ULEV(0x00000008U);
          gkernel.progInfo[4].value = 0; // ?
          
+         {  // get argument structure size
+            const cxbyte* metadata = binary->getMetadata(i);
+
+            const AmdCL2GPUMetadataHeader64* mdHdr =
+                     reinterpret_cast<const AmdCL2GPUMetadataHeader64*>(metadata);
+            size_t headerSize = ULEV(mdHdr->size);
+            size_t argOffset = headerSize + ULEV(mdHdr->firstNameLength) + 
+                     ULEV(mdHdr->secondNameLength)+2;
+            if (ULEV(*(const uint32_t*)(metadata+argOffset)) ==
+                        (sizeof(AmdCL2GPUKernelArgEntry64)<<8))
+               argOffset++;    // fix for AMD GPUPRO driver (2036.03) */
+            const AmdCL2GPUKernelArgEntry64* argPtr = reinterpret_cast<
+                     const AmdCL2GPUKernelArgEntry64*>(metadata + argOffset);
+            const uint32_t argsNum = ULEV(mdHdr->argsNum);
+            size_t strOffset = argOffset + sizeof(AmdCL2GPUKernelArgEntry64)*(argsNum+1);
+            
+            // mark all structure arguments
+            structsMap[kinfo.kernelName].resize(kinfo.argInfos.size()-6);
+            for (size_t ka = 6; ka < kinfo.argInfos.size(); ka++)
+                  structsMap[kinfo.kernelName][ka-6] =
+                        (kinfo.argInfos[ka].argType == KernelArgType::STRUCTURE) ?
+                              ULEV(argPtr[ka].structSize) : 0;
+            
+         }
          // convert arguments
          std::transform(kinfo.argInfos.begin()+6, kinfo.argInfos.end(), 
                std::back_inserter(gkernel.argInfos),
@@ -401,6 +433,18 @@ namespace clover {
             gmod = module::deserialize(istream);
          }
       }
+      // modify all structure arguments
+      for (auto& sym: gmod.syms) {
+         auto it = structsMap.find(sym.name);
+         if (it == structsMap.end()) continue;
+         typedef typename module::argument::type ttype;
+         for (size_t j = 0; j < it->second.size(); j++)
+            if (it->second[j]) {
+               sym.args[j].type = ttype::structure;
+               sym.args[j].size = sym.args[j].target_size = it->second[j];
+            }
+      }
+      
       /*for (const auto& sym: gmod.syms) {
          std::cout << "sym: " << sym.name << "\n";
          for (const auto& arg: sym.args)

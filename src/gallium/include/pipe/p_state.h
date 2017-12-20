@@ -816,6 +816,11 @@ struct pipe_grid_info
     */
    struct pipe_resource *indirect;
    unsigned indirect_offset; /**< must be 4 byte aligned */
+#ifdef ENABLE_COMP_BRIDGE
+   /* extra inputs */
+   void* extra_input;
+   size_t* extra_input_offset_replaces;
+#endif
 };
 
 /**
