@@ -208,7 +208,8 @@ program::build_amdocl2(const ref_vector<device> &devs, const std::string &opts) 
             binary.release();
             
          } catch(const std::exception& ex) {
-            _builds[&dev] = { module(), opts, ex.what() };
+            if (_builds[&dev].log.empty())
+               _builds[&dev] = { module(), opts, ex.what() };
             amdocl2_funcs->fn_clReleaseProgram(amdocl2_prog);
             throw build_error(ex.what());
          } catch(...) {
