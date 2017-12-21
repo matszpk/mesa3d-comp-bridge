@@ -45,6 +45,11 @@ struct si_compute {
 	unsigned local_size;
 	unsigned private_size;
 	unsigned input_size;
+#ifdef ENABLE_COMP_BRIDGE
+	unsigned extra_input_size;
+	unsigned extra_input_binding_num;
+	uint64_t* extra_input_binding;
+#endif
 	struct si_shader shader;
 
 	struct pipe_resource *global_buffers[MAX_GLOBAL_BUFFERS];

@@ -22,6 +22,8 @@
  *
  */
 
+//#include <stdio.h>
+
 #include "tgsi/tgsi_parse.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
@@ -157,6 +159,20 @@ static void *si_create_compute_state(
 	program->local_size = cso->req_local_mem;
 	program->private_size = cso->req_private_mem;
 	program->input_size = cso->req_input_mem;
+#ifdef ENABLE_COMP_BRIDGE
+	program->extra_input_size = cso->req_extra_input_mem;
+	//printf("extra input mem size: %llu\n", program->extra_input_size);
+	program->extra_input_binding_num = cso->extra_input_binding_num;
+	if (cso->extra_input_binding_num != 0) {
+		program->extra_input_binding = malloc(cso->extra_input_binding_num*8);
+		if (program->extra_input_binding==NULL) {
+			FREE(program); // if failed
+			return NULL;
+		}
+		memcpy(program->extra_input_binding, cso->extra_input_binding,
+			cso->extra_input_binding_num*8);
+	}
+#endif
 	program->use_code_object_v2 = HAVE_LLVM >= 0x0400 &&
 					cso->ir_type == PIPE_SHADER_IR_NATIVE;
 
@@ -601,17 +617,38 @@ static bool si_upload_compute_input(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_compute *program = sctx->cs_shader_state.program;
 	struct r600_resource *input_buffer = NULL;
+	struct r600_resource *extra_input_buffer = NULL;
 	unsigned kernel_args_size;
 	unsigned num_work_size_bytes = program->use_code_object_v2 ? 0 : 36;
 	uint32_t kernel_args_offset = 0;
 	uint32_t *kernel_args;
 	void *kernel_args_ptr;
-	uint64_t kernel_args_va;
+	uint64_t kernel_args_va = 0;
 	unsigned i;
+	uint32_t extra_input_offset;
+	uint64_t extra_input_va = 0;
 
 	/* The extra num_work_size_bytes are for work group / work item size information */
 	kernel_args_size = program->input_size + num_work_size_bytes;
+	
 
+#ifdef ENABLE_COMP_BRIDGE
+	if (program->extra_input_size) {
+		// put extra input (structure data)
+		u_upload_data(sctx->b.b.const_uploader, 0, program->extra_input_size,
+		       sctx->screen->b.info.tcc_cache_line_size,
+		       info->extra_input, &extra_input_offset,
+		       (struct pipe_resource**)&extra_input_buffer);
+		if (unlikely(!extra_input_buffer))
+			return false;
+		extra_input_va = extra_input_buffer->gpu_address + extra_input_offset;
+	
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, extra_input_buffer,
+					RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
+		r600_resource_reference(&extra_input_buffer, NULL);
+	}
+#endif
+	
 	u_upload_alloc(sctx->b.b.const_uploader, 0, kernel_args_size,
 		       sctx->screen->b.info.tcc_cache_line_size,
 		       &kernel_args_offset,
@@ -635,11 +672,27 @@ static bool si_upload_compute_input(struct si_context *sctx,
 	       program->input_size);
 
 
+#ifdef ENABLE_COMP_BRIDGE
+	// bind structure arguments to this inputs
+	if (program->extra_input_size != 0)
+		for (unsigned i = 0; i < program->extra_input_binding_num; i++) {
+			uint64_t offset;
+			uint64_t* place = (uint64_t*)(kernel_args_ptr +
+					program->extra_input_binding[i]);
+			uint64_t va = extra_input_va;
+			offset = util_le64_to_cpu(*place);
+			va += offset;
+			/*printf("extra_binding: %u: %llu: %llu\n", i,
+				program->extra_input_binding[i], offset);*/
+			va = util_cpu_to_le64(va);
+			memcpy(kernel_args_ptr + program->extra_input_binding[i],
+			       &va, sizeof(va));
+		}
+#endif
 	for (i = 0; i < (kernel_args_size / 4); i++) {
 		COMPUTE_DBG(sctx->screen, "input %u : %u\n", i,
 			kernel_args[i]);
 	}
-
 
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, input_buffer,
 				  RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
@@ -875,6 +928,12 @@ void si_destroy_compute(struct si_compute *program)
 	}
 
 	si_shader_destroy(&program->shader);
+#ifdef ENABLE_COMP_BRIDGE
+	if (program->extra_input_binding != NULL) {
+		free(program->extra_input_binding);
+		program->extra_input_binding = NULL;
+	}
+#endif
 	FREE(program);
 }
 
@@ -891,6 +950,12 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	if (program == sctx->cs_shader_state.emitted_program)
 		sctx->cs_shader_state.emitted_program = NULL;
 
+#ifdef ENABLE_COMP_BRIDGE
+	if (program->extra_input_binding != NULL) {
+		free(program->extra_input_binding);
+		program->extra_input_binding = NULL;
+	}
+#endif
 	si_compute_reference(&program, NULL);
 }
 

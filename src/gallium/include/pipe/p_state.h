@@ -819,7 +819,6 @@ struct pipe_grid_info
 #ifdef ENABLE_COMP_BRIDGE
    /* extra inputs */
    void* extra_input;
-   size_t* extra_input_offset_replaces;
 #endif
 };
 
@@ -838,6 +837,11 @@ struct pipe_compute_state
    unsigned req_local_mem; /**< Required size of the LOCAL resource. */
    unsigned req_private_mem; /**< Required size of the PRIVATE resource. */
    unsigned req_input_mem; /**< Required size of the INPUT resource. */
+#ifdef ENABLE_COMP_BRIDGE
+   unsigned req_extra_input_mem;
+   unsigned extra_input_binding_num;
+   uint64_t* extra_input_binding;
+#endif
 };
 
 /**

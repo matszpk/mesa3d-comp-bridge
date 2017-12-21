@@ -20,6 +20,8 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //
 
+//#include <iostream>
+
 #include "core/kernel.hpp"
 #include "core/resource.hpp"
 #include "util/factor.hpp"
@@ -81,6 +83,9 @@ kernel::launch(command_queue &q,
    copy(pad_vector(q, reduced_grid_size, 1), info.grid);
    info.pc = find(name_equals(_name), m.syms).offset;
    info.input = exec.input.data();
+#ifdef ENABLE_COMP_BRIDGE
+   info.extra_input = exec.extra_input.data();
+#endif
 
    q.pipe->launch_grid(q.pipe, &info);
 
@@ -164,9 +169,6 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    auto margs = find(name_equals(kern.name()), m.syms).args;
    auto msec = find(type_equals(module::section::text_executable), m.secs);
    auto explicit_arg = kern._args.begin();
-#ifdef ENABLE_COMP_BRIDGE
-   size_t structures_size = 0;
-#endif
    
 #ifdef ENABLE_COMP_BRIDGE
    const bool is_amdocl2_binary = kern.program().is_amdocl2_binary(q->device());
@@ -201,11 +203,6 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    for (auto &marg : margs) {
       switch (marg.semantic) {
       case module::argument::general:
-#ifdef ENABLE_COMP_BRIDGE
-         if (is_amdocl2_binary && marg.type == module::argument::structure) {
-            structures_size += marg.target_size;
-         }
-#endif
          (*(explicit_arg++))->bind(*this, marg);
          break;
 
@@ -262,23 +259,22 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    }
 
 #ifdef ENABLE_COMP_BRIDGE
-   size_t input_size = input.size();
-   if (structures_size) {
-      // align before
-      input_size = (input_size + 63) & ~size_t(63);
-      input_size += structures_size;
-   }
    // Create a new compute state if anything changed.
    if (!st || q != _q ||
        cs.req_local_mem != mem_local ||
-       cs.req_input_mem != input_size) {
+       cs.req_input_mem != input.size() ||
+       cs.extra_input_binding_num != g_structures.size() ||
+       cs.req_extra_input_mem != extra_input.size()) {
       if (st)
          _q->pipe->delete_compute_state(_q->pipe, st);
 
       cs.ir_type = q->device().ir_format();
       cs.prog = &(msec.data[0]);
       cs.req_local_mem = mem_local;
-      cs.req_input_mem = input_size;
+      cs.req_input_mem = input.size();
+      cs.req_extra_input_mem = extra_input.size();
+      cs.extra_input_binding_num = g_structures.size();
+      cs.extra_input_binding = (!g_structures.empty()) ? g_structures.data() : NULL;
    
       st = q->pipe->create_compute_state(q->pipe, &cs);
    }
@@ -417,9 +413,11 @@ kernel::argument::create(const module::argument &marg) {
 
    case module::argument::sampler:
       return std::unique_ptr<kernel::argument>(new sampler_argument);
-   case module::argument::structure:
-      return std::unique_ptr<kernel::argument>(new scalar_argument(marg.size));
 
+#ifdef ENABLE_COMP_BRIDGE
+   case module::argument::structure:
+      return std::unique_ptr<kernel::argument>(new structure_argument(marg.size));
+#endif
    }
    throw error(CL_INVALID_KERNEL_DEFINITION);
 }
@@ -658,3 +656,42 @@ void
 kernel::sampler_argument::unbind(exec_context &ctx) {
    s->unbind(*ctx.q, st);
 }
+
+#ifdef ENABLE_COMP_BRIDGE
+kernel::structure_argument::structure_argument(size_t size) : size(size) {
+}
+
+void
+kernel::structure_argument::set(size_t size, const void *value) {
+   if (!value)
+      throw error(CL_INVALID_ARG_VALUE);
+
+   if (size != this->size)
+      throw error(CL_INVALID_ARG_SIZE);
+
+   v = { (uint8_t *)value, (uint8_t *)value + size };
+   _set = true;
+}
+
+void
+kernel::structure_argument::bind(exec_context &ctx, const module::argument &marg) {
+   auto w = v;
+   extend(w, marg.ext_type, marg.target_size);
+   byteswap(w, ctx.q->device().endianness());
+   align(ctx.extra_input, 64);
+   size_t this_point = ctx.extra_input.size();
+   insert(ctx.extra_input, w);
+   
+   align(ctx.input, 8);
+   auto v = bytes(this_point);
+   extend(v, marg.ext_type, 8);
+   ctx.g_structures.push_back(ctx.input.size());
+   //std::cout << "extra_size: " << this_point << ", " << ctx.input.size() << std::endl;
+   byteswap(v, ctx.q->device().endianness());
+   insert(ctx.input, v);
+}
+
+void
+kernel::structure_argument::unbind(exec_context &ctx) {
+}
+#endif

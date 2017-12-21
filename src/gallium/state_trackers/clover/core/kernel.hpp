@@ -60,7 +60,7 @@ namespace clover {
          std::vector<pipe_resource *> g_buffers;
          std::vector<size_t> g_handles;
 #ifdef ENABLE_COMP_BRIDGE
-        std::vector<std::pair<size_t, size_t>> g_structures;
+        std::vector<uint64_t> g_structures;
         std::vector<uint8_t> extra_input;
 #endif
          size_t mem_local;
@@ -236,6 +236,21 @@ namespace clover {
          sampler *s;
          void *st;
       };
+      
+#ifdef ENABLE_COMP_BRIDGE
+      class structure_argument: public argument {
+      public:
+         structure_argument(size_t size);
+         
+         virtual void set(size_t size, const void *value);
+         virtual void bind(exec_context &ctx,
+                           const module::argument &marg);
+         virtual void unbind(exec_context &ctx);
+      private:
+         size_t size;
+         std::vector<uint8_t> v;
+      };
+#endif
 
       std::vector<std::unique_ptr<argument>> _args;
       std::string _name;
