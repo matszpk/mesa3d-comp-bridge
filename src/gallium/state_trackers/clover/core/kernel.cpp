@@ -188,9 +188,7 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
       }
       // skip first argument for filling first AMDOCL kernel args
       for(int i = 0; i < 3; i++) {
-         typedef typename module::argument::type ttype;
-         typedef typename module::argument::ext_type exttype;
-         module::argument marg(ttype::scalar, 8, 8, 8, exttype::zero_ext);
+         module::argument marg(module::argument::scalar, 8, 8, 8, module::argument::zero_ext);
          auto karg = kernel::argument::create(marg);
          ulong zero = 0;
          karg->set(sizeof(cl_ulong), &zero);
@@ -203,6 +201,11 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
    for (auto &marg : margs) {
       switch (marg.semantic) {
       case module::argument::general:
+#ifdef ENABLE_COMP_BRIDGE
+         if (is_amdocl2_binary && marg.type == module::argument::structure) {
+            structures_size += marg.target_size;
+         }
+#endif
          (*(explicit_arg++))->bind(*this, marg);
          break;
 
@@ -414,6 +417,8 @@ kernel::argument::create(const module::argument &marg) {
 
    case module::argument::sampler:
       return std::unique_ptr<kernel::argument>(new sampler_argument);
+   case module::argument::structure:
+      return std::unique_ptr<kernel::argument>(new scalar_argument(marg.size));
 
    }
    throw error(CL_INVALID_KERNEL_DEFINITION);

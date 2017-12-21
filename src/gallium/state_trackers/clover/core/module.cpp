@@ -437,10 +437,9 @@ namespace clover {
       for (auto& sym: gmod.syms) {
          auto it = structsMap.find(sym.name);
          if (it == structsMap.end()) continue;
-         typedef typename module::argument::type ttype;
          for (size_t j = 0; j < it->second.size(); j++)
             if (it->second[j]) {
-               sym.args[j].type = ttype::structure;
+               sym.args[j].type = module::argument::structure;
                sym.args[j].size = sym.args[j].target_size = it->second[j];
             }
       }
