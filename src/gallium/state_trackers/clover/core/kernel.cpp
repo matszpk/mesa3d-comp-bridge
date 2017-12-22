@@ -257,8 +257,14 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
       }
       }
    }
+   
 
 #ifdef ENABLE_COMP_BRIDGE
+   // align input and extra_input
+   if (is_amdocl2_binary) {
+      input.resize(util_align_npot(input.size(), 16));
+      extra_input.resize(util_align_npot(extra_input.size(), 16));
+   }
    // Create a new compute state if anything changed.
    if (!st || q != _q ||
        cs.req_local_mem != mem_local ||
