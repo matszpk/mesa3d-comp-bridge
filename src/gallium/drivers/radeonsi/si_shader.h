@@ -646,6 +646,21 @@ void si_multiwave_lds_size_workaround(struct si_screen *sscreen,
 				      unsigned *lds_size);
 void si_shader_apply_scratch_relocs(struct si_shader *shader,
 				    uint64_t scratch_va);
+#ifdef ENABLE_COMP_BRIDGE
+#define SI_RELOC_TEXT_LOW_32BIT 0
+#define SI_RELOC_TEXT_HIGH_32BIT 1
+
+struct si_text_reloc {
+	uint32_t type;
+	uint64_t offset;
+	int64_t addend;
+};
+
+void si_shader_apply_constant_relocs(struct si_shader *shader, unsigned relocs_num,
+		const struct si_text_reloc* relocs, uint64_t constant_va);
+int si_shader_binary_upload_tr(struct si_screen *sscreen, struct si_shader *shader,
+		unsigned int relocs_num, const struct si_text_reloc* relocs);
+#endif
 void si_shader_binary_read_config(struct ac_shader_binary *binary,
 				  struct si_shader_config *conf,
 				  unsigned symbol_offset);

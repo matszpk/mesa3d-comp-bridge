@@ -365,6 +365,9 @@ namespace clover {
       ginput.deviceType = devtype;
       ginput.codeSize = hsatext_size;
       ginput.code = hsatext;
+      ginput.globalDataSize = inner.getGlobalDataSize();
+      ginput.globalData = inner.getGlobalData();
+      //std::cout << "globalDataSize: " << ginput.globalDataSize << std::endl;
       for (size_t i = 0; i < binary->getKernelInfosNum(); i++) {
          const auto& kinfo = binary->getKernelInfo(i);
          const auto& bkernel = inner.getKernelData(i);
@@ -402,7 +405,6 @@ namespace clover {
             const AmdCL2GPUKernelArgEntry64* argPtr = reinterpret_cast<
                      const AmdCL2GPUKernelArgEntry64*>(metadata + argOffset);
             const uint32_t argsNum = ULEV(mdHdr->argsNum);
-            size_t strOffset = argOffset + sizeof(AmdCL2GPUKernelArgEntry64)*(argsNum+1);
             
             // mark all structure arguments
             structsMap[kinfo.kernelName].resize(kinfo.argInfos.size()-6);
@@ -442,6 +444,36 @@ namespace clover {
                sym.args[j].type = module::argument::structure;
                sym.args[j].size = sym.args[j].target_size = it->second[j];
             }
+      }
+      
+      /* put constant (global data relocs) */
+      // getting optional sections in inner binary
+      uint16_t gDataSectionIdx = SHN_UNDEF;
+      try
+      { gDataSectionIdx = inner.getSectionIndex(".hsadata_readonly_agent"); }
+      catch(const Exception& ex)
+      { }
+      for (size_t i = 0; i < inner.getTextRelaEntriesNum(); i++) {
+         const Elf64_Rela& rela = inner.getTextRelaEntry(i);
+         uint32_t symIndex = ELF64_R_SYM(ULEV(rela.r_info));
+         int64_t addend = ULEV(rela.r_addend);
+         const Elf64_Sym& sym = inner.getSymbol(symIndex);
+         uint16_t symShndx = ULEV(sym.st_shndx);
+         if (symShndx!=gDataSectionIdx)
+            throw Exception("Symbol is not placed in global data");
+         addend += ULEV(sym.st_value);
+         typename module::reloc::type reloc_type;
+         uint32_t rtype = ELF64_R_TYPE(ULEV(rela.r_info));
+         if (rtype==1)
+            reloc_type = module::reloc::low_32bit;
+         else if (rtype==2)
+            reloc_type = module::reloc::high_32bit;
+         else
+            throw Exception("Unknown relocation type");
+         
+         /*std::cout << "reloc: " << reloc_type << ", " << ULEV(rela.r_offset) <<
+                     ", " << addend << "\n";*/
+         gmod.relocs.push_back({reloc_type, ULEV(rela.r_offset), addend});
       }
       
       /*for (const auto& sym: gmod.syms) {

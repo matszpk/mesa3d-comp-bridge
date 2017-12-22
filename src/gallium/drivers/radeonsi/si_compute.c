@@ -214,7 +214,14 @@ static void *si_create_compute_state(
 		}
 		si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
 			       PIPE_SHADER_COMPUTE, stderr, true);
-		if (si_shader_binary_upload(sctx->screen, &program->shader) < 0) {
+#ifdef ENABLE_COMP_BRIDGE
+		if (si_shader_binary_upload_tr(sctx->screen, &program->shader,
+                        cso->prog_constant_relocs_num,
+                        (const struct si_text_reloc*)cso->prog_constant_relocs) < 0)
+#else
+                if (si_shader_binary_upload_tr(sctx->screen, &program->shader) < 0)
+#endif
+                {
 			fprintf(stderr, "LLVM failed to upload shader\n");
 			FREE(program);
 			return NULL;

@@ -26,6 +26,8 @@
  *      Christian König <christian.koenig@amd.com>
  */
 
+//#include <stdio.h>
+
 #include "gallivm/lp_bld_const.h"
 #include "gallivm/lp_bld_gather.h"
 #include "gallivm/lp_bld_intr.h"
@@ -5003,6 +5005,22 @@ void si_shader_apply_scratch_relocs(struct si_shader *shader,
 	}
 }
 
+#ifdef ENABLE_COMP_BRIDGE
+void si_shader_apply_constant_relocs(struct si_shader *shader, unsigned relocs_num,
+	const struct si_text_reloc* relocs, uint64_t constant_va)
+{
+	unsigned i;
+	for (i = 0; i < relocs_num; i++) {
+		uint64_t va;
+		uint32_t value;
+		va = constant_va + relocs[i].addend;
+		value = (relocs[i].type == SI_RELOC_TEXT_HIGH_32BIT) ?
+			(va >> 32) : (va & 0xffffffffU);
+		util_memcpy_cpu_to_le32(shader->binary.code + relocs[i].offset, &value, 4);
+	}
+}
+#endif
+
 static unsigned si_get_shader_binary_size(const struct si_shader *shader)
 {
 	unsigned size = shader->binary.code_size;
@@ -5079,6 +5097,76 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	sscreen->b.ws->buffer_unmap(shader->bo->buf);
 	return 0;
 }
+
+#ifdef ENABLE_COMP_BRIDGE
+int si_shader_binary_upload_tr(struct si_screen *sscreen, struct si_shader *shader,
+	unsigned int relocs_num, const struct si_text_reloc* relocs)
+{
+	const struct ac_shader_binary *prolog =
+		shader->prolog ? &shader->prolog->binary : NULL;
+	const struct ac_shader_binary *previous_stage =
+		shader->previous_stage ? &shader->previous_stage->binary : NULL;
+	const struct ac_shader_binary *prolog2 =
+		shader->prolog2 ? &shader->prolog2->binary : NULL;
+	const struct ac_shader_binary *epilog =
+		shader->epilog ? &shader->epilog->binary : NULL;
+	const struct ac_shader_binary *mainb = &shader->binary;
+	unsigned bo_size = si_get_shader_binary_size(shader) +
+			   (!epilog ? mainb->rodata_size : 0);
+	unsigned char *ptr;
+
+	assert(!prolog || !prolog->rodata_size);
+	assert(!previous_stage || !previous_stage->rodata_size);
+	assert(!prolog2 || !prolog2->rodata_size);
+	assert((!prolog && !previous_stage && !prolog2 && !epilog) ||
+	       !mainb->rodata_size);
+	assert(!epilog || !epilog->rodata_size);
+
+	r600_resource_reference(&shader->bo, NULL);
+	shader->bo = (struct r600_resource*)
+		     pipe_buffer_create(&sscreen->b.b, 0,
+					PIPE_USAGE_IMMUTABLE,
+					align(bo_size, SI_CPDMA_ALIGNMENT));
+	if (!shader->bo)
+		return -ENOMEM;
+
+	//printf("si_relocs: %u, %u\n", relocs_num, mainb->rodata_size);
+	if (relocs_num > 0 && mainb->rodata_size > 0) {
+		si_shader_apply_constant_relocs(shader, relocs_num, relocs,
+			shader->bo->gpu_address + mainb->code_size);
+	}
+	/* Upload. */
+	ptr = sscreen->b.ws->buffer_map(shader->bo->buf, NULL,
+					PIPE_TRANSFER_READ_WRITE |
+					PIPE_TRANSFER_UNSYNCHRONIZED);
+
+	/* Don't use util_memcpy_cpu_to_le32. LLVM binaries are
+	 * endian-independent. */
+	if (prolog) {
+		memcpy(ptr, prolog->code, prolog->code_size);
+		ptr += prolog->code_size;
+	}
+	if (previous_stage) {
+		memcpy(ptr, previous_stage->code, previous_stage->code_size);
+		ptr += previous_stage->code_size;
+	}
+	if (prolog2) {
+		memcpy(ptr, prolog2->code, prolog2->code_size);
+		ptr += prolog2->code_size;
+	}
+
+	memcpy(ptr, mainb->code, mainb->code_size);
+	ptr += mainb->code_size;
+
+	if (epilog)
+		memcpy(ptr, epilog->code, epilog->code_size);
+	else if (mainb->rodata_size > 0)
+		memcpy(ptr, mainb->rodata, mainb->rodata_size);
+
+	sscreen->b.ws->buffer_unmap(shader->bo->buf);
+	return 0;
+}
+#endif
 
 static void si_shader_dump_disassembly(const struct ac_shader_binary *binary,
 				       struct pipe_debug_callback *debug,

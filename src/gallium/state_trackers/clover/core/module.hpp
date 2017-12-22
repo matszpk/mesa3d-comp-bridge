@@ -124,6 +124,18 @@ namespace clover {
          size_t offset;
          std::vector<argument> args;
       };
+#ifdef ENABLE_COMP_BRIDGE
+      struct reloc {
+          enum type: uint32_t {
+              low_32bit,
+              high_32bit
+          };
+          
+          type type;
+          uint64_t offset;
+          int64_t addend;
+      };
+#endif
 
       void serialize(std::ostream &os) const;
       static module deserialize(std::istream &is);
@@ -135,6 +147,9 @@ namespace clover {
 
       std::vector<symbol> syms;
       std::vector<section> secs;
+#ifdef ENABLE_COMP_BRIDGE
+      std::vector<reloc> relocs;
+#endif
    };
 }
 

@@ -841,6 +841,8 @@ struct pipe_compute_state
    unsigned req_extra_input_mem;
    unsigned extra_input_binding_num;
    uint64_t* extra_input_binding;
+   unsigned prog_constant_relocs_num;
+   const void* prog_constant_relocs;
 #endif
 };
 

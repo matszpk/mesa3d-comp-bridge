@@ -281,6 +281,8 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
       cs.req_extra_input_mem = extra_input.size();
       cs.extra_input_binding_num = g_structures.size();
       cs.extra_input_binding = (!g_structures.empty()) ? g_structures.data() : NULL;
+      cs.prog_constant_relocs_num = m.relocs.size();
+      cs.prog_constant_relocs = (const void*)m.relocs.data();
    
       st = q->pipe->create_compute_state(q->pipe, &cs);
    }
