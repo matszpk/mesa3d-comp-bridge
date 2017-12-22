@@ -133,14 +133,15 @@ clCreateProgramWithBinary(cl_context d_ctx, cl_uint n,
       }
    }
 #else
-   std::vector<std::<cl_int, module>> result = map(
-      [](const unsigned char *p, size_t l, const device& d) -> std::pair<cl_int, module> {
+   std::vector<std::pair<cl_int, module>> result = map(
+      [](const unsigned char *p, size_t l) -> std::pair<cl_int, module> {
          if (!p || !l)
             return { CL_INVALID_VALUE, {} };
 
          try {
             std::stringbuf bin( { (char*)p, l } );
             std::istream s(&bin);
+            
             return { CL_SUCCESS, module::deserialize(s) };
 
          } catch (std::istream::failure &e) {
