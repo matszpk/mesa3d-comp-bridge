@@ -315,6 +315,10 @@ kernel::exec_context::unbind() {
    resources.clear();
    g_buffers.clear();
    g_handles.clear();
+#ifdef ENABLE_COMP_BRIDGE
+   extra_input.clear();
+   g_structures.clear();
+#endif
    mem_local = 0;
 }
 
