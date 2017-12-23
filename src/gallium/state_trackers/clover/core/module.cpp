@@ -234,13 +234,13 @@ struct gallium_argtype_info {
 static const gallium_argtype_info gallium_to_amdocl2_argtype_table[] = {
    { GalliumArgType::SCALAR, false, 1, 4 }, // VOID
    { GalliumArgType::SCALAR, false, 1, 1 }, // UCHAR
-   { GalliumArgType::SCALAR, true, 1, 1 }, // CHAR
+   { GalliumArgType::SCALAR, false, 1, 1 }, // CHAR
    { GalliumArgType::SCALAR, false, 2, 2 }, // USHORT
-   { GalliumArgType::SCALAR, true, 2, 2 }, // SHORT
+   { GalliumArgType::SCALAR, false, 2, 2 }, // SHORT
    { GalliumArgType::SCALAR, false, 4, 4 }, // UINT
-   { GalliumArgType::SCALAR, true, 4, 4 }, // INT
+   { GalliumArgType::SCALAR, false, 4, 4 }, // INT
    { GalliumArgType::SCALAR, false, 8, 8 }, // ULONG
-   { GalliumArgType::SCALAR, true, 8, 8 }, // LONG
+   { GalliumArgType::SCALAR, false, 8, 8 }, // LONG
    { GalliumArgType::SCALAR, false, 4, 4 }, // FLOAT
    { GalliumArgType::SCALAR, false, 8, 8 }, // DOUBLE
    { GalliumArgType::GLOBAL, false, 8, 8 }, // POINTER
@@ -354,7 +354,9 @@ namespace clover {
       const AmdCL2InnerGPUBinary& inner = binary->getInnerBinary();
       const Elf64_Shdr& shdr = inner.getSectionHeader(".hsatext");
       size_t hsatext_size = ULEV(shdr.sh_size);
-      const cxbyte* hsatext = inner.getBinaryCode() + ULEV(shdr.sh_offset);
+      const cxbyte* hsatext_orig = inner.getBinaryCode() + ULEV(shdr.sh_offset);
+      std::unique_ptr<cxbyte[]> hsatext(new cxbyte[hsatext_size]);
+      ::memcpy(hsatext.get(), hsatext_orig, hsatext_size);
       
       std::map<CString, std::vector<size_t>> structsMap;
       
@@ -364,7 +366,7 @@ namespace clover {
       ginput.isMesa170 = true;
       ginput.deviceType = devtype;
       ginput.codeSize = hsatext_size;
-      ginput.code = hsatext;
+      ginput.code = hsatext.get();
       ginput.globalDataSize = inner.getGlobalDataSize();
       ginput.globalData = inner.getGlobalData();
       //std::cout << "globalDataSize: " << ginput.globalDataSize << std::endl;
@@ -372,10 +374,10 @@ namespace clover {
          const auto& kinfo = binary->getKernelInfo(i);
          const auto& bkernel = inner.getKernelData(i);
          GalliumKernelInput gkernel{ kinfo.kernelName };
-         gkernel.offset = bkernel.setup - hsatext;
+         gkernel.offset = bkernel.setup - hsatext_orig;
          gkernel.useConfig = false;
-         AmdHsaKernelConfig hsaConfig{};
-         ::memcpy(&hsaConfig, bkernel.setup, sizeof(AmdHsaKernelConfig));
+         AmdHsaKernelConfig& hsaConfig = *(AmdHsaKernelConfig*)
+                  (hsatext.get() + gkernel.offset);
          const size_t localSize = ULEV(hsaConfig.workgroupGroupSegmentSize);
          // fix compute pgmrsrc2
          SULEV(hsaConfig.computePgmRsrc2, ULEV(hsaConfig.computePgmRsrc2) |

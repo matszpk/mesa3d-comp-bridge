@@ -22,6 +22,10 @@
 
 //#include <iostream>
 
+#ifdef ENABLE_COMP_BRIDGE
+#include <CLRX/amdbin/Commons.h>
+#include <CLRX/amdbin/GalliumBinaries.h>
+#endif
 #include "core/kernel.hpp"
 #include "core/resource.hpp"
 #include "util/factor.hpp"
@@ -29,6 +33,9 @@
 #include "pipe/p_context.h"
 
 using namespace clover;
+#ifdef ENABLE_COMP_BRIDGE
+using namespace CLRX;
+#endif
 
 kernel::kernel(clover::program &prog, const std::string &name,
                const std::vector<module::argument> &margs) :
@@ -173,6 +180,19 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
 #ifdef ENABLE_COMP_BRIDGE
    const bool is_amdocl2_binary = kern.program().is_amdocl2_binary(q->device());
    if (is_amdocl2_binary) {
+      // get local size to fix mem_local
+      {
+         GalliumElfBinary64 gbin(msec.data.size(), (cxbyte*)(msec.data.data()+4), 0,
+                           m.syms.size());
+         const cxbyte* gbtext = gbin.getSectionContent(".text");
+         const auto& ksym = gbin.getSymbol(kern.name().c_str());
+         const cxbyte* kcontent = gbtext + ULEV(ksym.st_value);
+         const AmdHsaKernelConfig& hsaConfig = *(const AmdHsaKernelConfig*)(kcontent);
+         mem_local = hsaConfig.workgroupGroupSegmentSize;
+         mem_local = (mem_local + 255) & ~size_t(255);
+         //std::cout << "mem_local: " << mem_local << std::endl;
+      }
+      
       for (auto &marg : margs) {
          switch (marg.semantic) {
          case module::argument::grid_offset: {
