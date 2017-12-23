@@ -546,7 +546,7 @@ kernel::local_argument::set(size_t size, const void *value) {
    if (!size)
       throw error(CL_INVALID_ARG_SIZE);
 
-   _storage = size;
+   _storage = (size + 15) & ~size_t(15); // align to 16 (to fix some errors)
    _set = true;
 }
 
