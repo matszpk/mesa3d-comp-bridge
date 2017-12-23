@@ -49,6 +49,8 @@ struct si_compute {
 	unsigned extra_input_size;
 	unsigned extra_input_binding_num;
 	uint64_t* extra_input_binding;
+        unsigned prog_constant_relocs_num;
+        struct si_text_reloc* prog_constant_relocs;
 #endif
 	struct si_shader shader;
 

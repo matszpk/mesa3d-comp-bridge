@@ -172,6 +172,22 @@ static void *si_create_compute_state(
 		memcpy(program->extra_input_binding, cso->extra_input_binding,
 			cso->extra_input_binding_num*8);
 	}
+	program->prog_constant_relocs_num = cso->prog_constant_relocs_num;
+	if (cso->prog_constant_relocs_num != 0) {
+		program->prog_constant_relocs = malloc(cso->prog_constant_relocs_num*
+			sizeof(struct si_text_reloc));
+		if (program->prog_constant_relocs==NULL) {
+			// if failed
+			if (program->extra_input_binding != NULL) {
+				free(program->extra_input_binding);
+				program->extra_input_binding = NULL;
+			}
+			FREE(program); // if failed
+			return NULL;
+		}
+		memcpy(program->prog_constant_relocs, cso->prog_constant_relocs,
+			cso->prog_constant_relocs_num*sizeof(struct si_text_reloc));
+	}
 #endif
 	program->use_code_object_v2 = HAVE_LLVM >= 0x0400 &&
 					cso->ir_type == PIPE_SHADER_IR_NATIVE;
@@ -216,10 +232,10 @@ static void *si_create_compute_state(
 			       PIPE_SHADER_COMPUTE, stderr, true);
 #ifdef ENABLE_COMP_BRIDGE
 		if (si_shader_binary_upload_tr(sctx->screen, &program->shader,
-                        cso->prog_constant_relocs_num,
-                        (const struct si_text_reloc*)cso->prog_constant_relocs) < 0)
+                        program->prog_constant_relocs_num,
+                        program->prog_constant_relocs) < 0)
 #else
-                if (si_shader_binary_upload_tr(sctx->screen, &program->shader) < 0)
+                if (si_shader_binary_upload(sctx->screen, &program->shader) < 0)
 #endif
                 {
 			fprintf(stderr, "LLVM failed to upload shader\n");
@@ -339,7 +355,12 @@ static void si_initialize_compute(struct si_context *sctx)
 
 static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
                                             struct si_shader *shader,
-                                            struct si_shader_config *config)
+                                            struct si_shader_config *config
+#ifdef ENABLE_COMP_BRIDGE
+					    , unsigned text_relocs_num,
+					    const struct si_text_reloc* text_relocs
+#endif
+					   )
 {
 	uint64_t scratch_bo_size, scratch_needed;
 	scratch_bo_size = 0;
@@ -365,8 +386,14 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 
 		si_shader_apply_scratch_relocs(shader, scratch_va);
 
+#ifdef ENABLE_COMP_BRIDGE
+		if (si_shader_binary_upload_tr(sctx->screen, shader,
+				text_relocs_num, text_relocs))
+			return false;
+#else
 		if (si_shader_binary_upload(sctx->screen, shader))
 			return false;
+#endif
 
 		r600_resource_reference(&shader->scratch_bo,
 		                        sctx->compute_scratch_buffer);
@@ -421,7 +448,12 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 		config->rsrc2 |=  S_00B84C_LDS_SIZE(lds_blocks);
 	}
 
+#ifdef ENABLE_COMP_BRIDGE
+	if (!si_setup_compute_scratch_buffer(sctx, shader, config,
+		program->prog_constant_relocs_num, program->prog_constant_relocs))
+#else
 	if (!si_setup_compute_scratch_buffer(sctx, shader, config))
+#endif
 		return false;
 
 	if (shader->scratch_bo) {
@@ -940,6 +972,10 @@ void si_destroy_compute(struct si_compute *program)
 		free(program->extra_input_binding);
 		program->extra_input_binding = NULL;
 	}
+	if (program->prog_constant_relocs != NULL) {
+		free(program->prog_constant_relocs);
+		program->prog_constant_relocs = NULL;
+	}
 #endif
 	FREE(program);
 }
@@ -961,6 +997,10 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	if (program->extra_input_binding != NULL) {
 		free(program->extra_input_binding);
 		program->extra_input_binding = NULL;
+	}
+	if (program->prog_constant_relocs != NULL) {
+		free(program->prog_constant_relocs);
+		program->prog_constant_relocs = NULL;
 	}
 #endif
 	si_compute_reference(&program, NULL);
