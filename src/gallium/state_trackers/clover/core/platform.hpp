@@ -134,6 +134,8 @@ namespace clover {
       { return amdocl2_context; }
       const amdocl2_funcs_struct* get_amdocl2_handlers() const
       { return amdocl2_funcs.get(); }
+      bool is_allow_amdocl2_for_gcn14() const
+      { return allow_amdocl2_for_gcn14; }
    private:
       void load_config_from_file(const char* filename);
       void load_config();
@@ -144,6 +146,7 @@ namespace clover {
       int amdocl2_version;
       std::map<CLRX::GPUArchitecture, comp_bridge> arch_bridge_map;
       std::map<CLRX::GPUDeviceType, comp_bridge> dev_bridge_map;
+      bool allow_amdocl2_for_gcn14;
       
       bool amdocl2_dynlib_load_tried;
       CLRX::DynLibrary amdocl2_dynlib;

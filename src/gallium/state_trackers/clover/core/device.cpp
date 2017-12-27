@@ -106,6 +106,9 @@ device::device(clover::platform &platform, pipe_loader_device *ldev) :
 #ifdef ENABLE_COMP_BRIDGE
    try {
       devtype = get_clrx_dev_type_from_dev_name(device_name());
+      if (platform.is_allow_amdocl2_for_gcn14() &&
+         getGPUArchitectureFromDeviceType(devtype)==GPUArchitecture::GCN1_4)
+         devtype = GPUDeviceType::TONGA;
    } catch(const std::exception& ex) {
       std::cerr << "Can't determine device type" << std::endl;
       throw error(CL_INVALID_DEVICE);

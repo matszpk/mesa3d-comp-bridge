@@ -37,6 +37,7 @@ using namespace CLRX;
 
 platform::platform() : adaptor_range(evals(), devs) {
 #ifdef ENABLE_COMP_BRIDGE
+   allow_amdocl2_for_gcn14 = false;
    amdocl2_context = nullptr;
    amdocl2_dynlib_load_tried = false;
    load_config();
@@ -204,6 +205,9 @@ platform::load_config_from_file(const char* filename) try {
          
          if (param == "amdocl2_path") {
             amdocl2_path = value;
+         } if (param == "allow_amdocl2_for_gcn14") {
+            value = trimSpaces(value);
+            allow_amdocl2_for_gcn14 = (value=="true" || value=="1");
          } else if (param.compare(0, 9, "archcomp_")==0) {
             GPUArchitecture arch = GPUArchitecture::GCN1_1;
             try {
