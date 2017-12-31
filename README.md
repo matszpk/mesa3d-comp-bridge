@@ -15,8 +15,9 @@ This feature will be not working under same open-source AMDGPU driver or RadeonS
 
 I recommend to read the documentation about the installation (in the `docs` direcrory).
 
-Before building this Mesa3D, you should install CLRadeonExtender 0.1.6 or later. Code of a
-this feature need that package.
+Before building this Mesa3D, you should install CLRadeonExtender 0.1.6 or later
+[http://clrx.nativeboinc.org](http://clrx.nativeboinc.org).
+Code of this feature need that package.
 
 After that, you should create configure scripts by using command `./autogen.sh`. You can use
 NOCONFIGURE variable to skip configuration.
@@ -29,7 +30,7 @@ Example configuration command:
 
 ```
 ../configure --prefix=/opt/mymesa \
-    --enable-opencl --enable-opencl-icd --enable-gbm --with-llvm-prefix=/opt/newgallium \
+    --enable-opencl --enable-opencl-icd --enable-gbm --with-llvm-prefix=/opt/mymesa \
     --with-platforms=drm,x11 --with-dri-drivers=swrast,radeon,i915,i965 \
     --with-gallium-drivers=svga,r600,radeonsi --enable-glx-tls \
     --enable-comp-bridge
@@ -44,7 +45,7 @@ the system directory).
 
 By default, a COMP_BRIDGE feature is disabled. The simple copnfiguration file allow to
 enable this feature to particular devices. You can put this file as `/etc/clover_compbridge` or
-`~/.clover_compbridge`. The syntax of this file is trivial:
+`~/.clover_compbridge`. The syntax of this file is simple:
 
 ```
 archcomp_gcn1.1=amdocl2
@@ -53,9 +54,19 @@ archcomp_gcn1.4=amdocl2
 allow_amdocl2_for_gcn14=1
 ```
 
+or
+
+```
+devcomp_hawaii=amdocl2
+devcomp_baffin=amdocl2
+devcomp_gfx900=amdocl2
+allow_amdocl2_for_gcn14=1
+```
+
 The `archomp_gcn1.X` enables the AMDGPU-PRO compiler for the GCN1.X devices.
 The `devcomp_XXXX` enables the AMDGPU-PRO compiler for particular device, where XXX is
-a name of the GPU device.
+a name of the GPU device. The value of these parameters is compiler bridge.
+Currently, only 'amdocl2' is working.
 
 The list of the GPU architectures:
 
@@ -124,4 +135,11 @@ Because, an AMDOCL2 compiler for the Linux doesn't supports Radeon RX VEGA (only
 the generated code under RX VEGA. A GCN 5 architecture is compatible with GCN 3/4 in
 99 percents, however some less important difference are exists. Some code which uses
 half float point loading/store can be incorrectly working under RX VEGA.
-A code that uses V_MOVRELS (removed in GCN 5) will be working incorrectly too.
+A code that uses the V_MOVRELXX instructions (removed in GCN 5) will be
+working incorrectly too.
+
+### Building the OpenCL programs from binaries
+
+This feature substitutes default Clover compiler by AMDGPU-PRO compiler.
+It does not disable ability to build programs from Clover OpenCL binaries. A code this feature
+same recognizes the type of a binary and choose suitable path to prepare that binary.
