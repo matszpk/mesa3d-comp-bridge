@@ -10,6 +10,10 @@ the OpenCL code.
 
 This feature requires a working AMDGPU-PRO driver to run code from AMDGPU-PRO OpenCL driver.
 This feature will be not working under same open-source AMDGPU driver or RadeonSI driver.
+This code should be working under 64-bit x86-64 Linux systems. The 32-bit x86 architecture
+is not supported.
+
+This feature has been tested under OpenSUSE 14.2 and a AMDGPU-PRO 17.40 drivers.
 
 ### Building
 
@@ -23,6 +27,17 @@ Code of this feature need that package.
 After that, you should create configure scripts by using command `./autogen.sh`. You can use
 NOCONFIGURE variable to skip configuration.
 
+I recommend to build Mesa3D in child directory like `build` and install in directory other
+than system (not in `/usr`) like in `/opt/mymesa`.
+
+```
+mkdir build
+cd build
+../configure ....
+make
+...
+```
+
 While entering 'configure' command you should include '--enable-comp-bridge' option to enable
 this a Compiler's bridge. Ofcourse, you should add gallium drivers: radeonsi and DRI drivers
 drivers: radeon.
@@ -30,12 +45,15 @@ drivers: radeon.
 Example configuration command:
 
 ```
-../configure --prefix=/opt/mymesa \
+./configure --prefix=/opt/mymesa \
     --enable-opencl --enable-opencl-icd --enable-gbm --with-llvm-prefix=/opt/mymesa \
     --with-platforms=drm,x11 --with-dri-drivers=swrast,radeon,i915,i965 \
     --with-gallium-drivers=svga,r600,radeonsi --enable-glx-tls \
     --enable-comp-bridge
 ```
+
+If you install other components (LLVM, libclc) in directory other than `/usr` then you remember
+about setting the PKG_CONFIG_PATH variable before entering `configure` command.
 
 After configuration, you can just build Mesa3D by command: `make`
 
@@ -44,9 +62,25 @@ the system directory).
 
 ### Configuration
 
-By default, a COMP_BRIDGE feature is disabled. The simple copnfiguration file allow to
+Now you can use built Mesa3D Clover with this feature. If you enable OpenCL ICD (
+configure option `--enable-opencl-icd`) you should add OpenCL vendor to `/etc/OpenCL/vendors`.
+Just write full path to libMesaOpenCL library to some ICD file in a `/etc/OpenCL/vendors`:
+
+```
+echo /opt/mymesa/lib64/libMesaOpenCL.so > /etc/OpenCL/vendors/mymesa.icd
+```
+
+Otherwise, you must set LD_LIBRARY_PATH to path of a libMesaOpenCL directory if you install
+this Mesa3D in directory other than `/usr`:
+
+```
+export LD_LIBRARY_PATH="/opt/mymesa/lib64:$LD_LIBRARY_PATH"
+```
+
+By default, a COMP_BRIDGE feature is disabled. The simple configuration file allow to
 enable this feature to particular devices. You can put this file as `/etc/clover_compbridge` or
-`~/.clover_compbridge`. The syntax of this file is simple:
+`~/.clover_compbridge` (`.clover_compbridge` in your home directory).
+The syntax of this file is simple:
 
 ```
 archcomp_gcn1.1=amdocl2
