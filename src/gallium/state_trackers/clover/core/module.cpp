@@ -406,7 +406,6 @@ namespace clover {
                argOffset++;    // fix for AMD GPUPRO driver (2036.03) */
             const AmdCL2GPUKernelArgEntry64* argPtr = reinterpret_cast<
                      const AmdCL2GPUKernelArgEntry64*>(metadata + argOffset);
-            const uint32_t argsNum = ULEV(mdHdr->argsNum);
             
             // mark all structure arguments
             structsMap[kinfo.kernelName].resize(kinfo.argInfos.size()-6);
