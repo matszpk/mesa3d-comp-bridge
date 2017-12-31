@@ -921,9 +921,7 @@ static void si_launch_grid(
 
 	if ((program->input_size ||
             program->ir_type == PIPE_SHADER_IR_NATIVE) &&
-           unlikely(!si_upload_compute_input(sctx, code_object, info)))
-	{
-		
+           unlikely(!si_upload_compute_input(sctx, code_object, info))) {
 		return;
 	}
 

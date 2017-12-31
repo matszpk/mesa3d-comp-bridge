@@ -104,12 +104,15 @@ namespace clover {
       { return amdocl2_device; }
       CLRX::GPUDeviceType get_device_type() const
       { return devtype; }
+      CLRX::GPUDeviceType get_real_device_type() const
+      { return real_devtype; }
 #endif
    private:
       pipe_screen *pipe;
       pipe_loader_device *ldev;
 #ifdef ENABLE_COMP_BRIDGE
       CLRX::GPUDeviceType devtype;
+      CLRX::GPUDeviceType real_devtype;
       clover::comp_bridge bridge;
       cl_device_id amdocl2_device;
 #endif

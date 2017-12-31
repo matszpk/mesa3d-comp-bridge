@@ -55,12 +55,13 @@ platform::platform() : adaptor_range(evals(), devs) {
             auto& dev = devs.back();
             auto dname = dev().device_name();
             GPUDeviceType devtype = dev().get_device_type();
+            GPUDeviceType real_devtype = dev().get_real_device_type();
             // check whether to load amdocl2 library
-            GPUArchitecture arch = getGPUArchitectureFromDeviceType(devtype);
+            GPUArchitecture arch = getGPUArchitectureFromDeviceType(real_devtype);
             auto ait = arch_bridge_map.find(arch);
-            auto dit = dev_bridge_map.find(devtype);
+            auto dit = dev_bridge_map.find(real_devtype);
             if ((ait != arch_bridge_map.end() && ait->second==comp_bridge::amdocl2) ||
-                (dit != dev_bridge_map.end() && dit->second==comp_bridge::amdocl2))
+                (dit != dev_bridge_map.end() && dit->second==comp_bridge::amdocl2)) {
                if (!amdocl2_dynlib_load_tried) {
                   // try load amdocl2
                   try {
@@ -75,6 +76,7 @@ platform::platform() : adaptor_range(evals(), devs) {
                auto devit = amdocl2_device_map.find(devtype);
                if (devit != amdocl2_device_map.end())
                   dev().set_comp_bridge(comp_bridge::amdocl2, devit->second);
+            }
          }
 #else
          if (ldev)
@@ -110,6 +112,14 @@ trimSpaces(const std::string& s) {
       return "";
    std::string::size_type endPos = s.find_last_not_of(" \n\t\r\v\f");
    return s.substr(pos, endPos+1-pos);
+}
+
+static std::string
+trimLeftSpaces(const std::string& s) {
+   std::string::size_type pos = s.find_first_not_of(" \n\t\r\v\f");
+   if (pos == std::string::npos)
+      return "";
+   return s.substr(pos);
 }
 
 void
@@ -202,6 +212,9 @@ platform::load_config_from_file(const char* filename) try {
          
          std::string param = trimSpaces(line.substr(0, inequal));
          std::string value = line.substr(inequal+1);
+         value = trimLeftSpaces(value);
+         if (value.empty())
+            throw ParseException(line_no, "No value in param line");
          
          if (param == "amdocl2_path") {
             amdocl2_path = value;

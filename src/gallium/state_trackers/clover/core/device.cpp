@@ -93,7 +93,8 @@ static GPUDeviceType get_clrx_dev_type_from_dev_name(const std::string& deviceNa
 device::device(clover::platform &platform, pipe_loader_device *ldev) :
    platform(platform), ldev(ldev) 
 #ifdef ENABLE_COMP_BRIDGE
-   , devtype(GPUDeviceType::CAPE_VERDE), bridge(comp_bridge::none),
+   , devtype(GPUDeviceType::CAPE_VERDE), real_devtype(GPUDeviceType::CAPE_VERDE),
+     bridge(comp_bridge::none),
      amdocl2_device(nullptr)
 #endif
    {
@@ -105,7 +106,7 @@ device::device(clover::platform &platform, pipe_loader_device *ldev) :
    }
 #ifdef ENABLE_COMP_BRIDGE
    try {
-      devtype = get_clrx_dev_type_from_dev_name(device_name());
+      real_devtype = devtype = get_clrx_dev_type_from_dev_name(device_name());
       if (platform.is_allow_amdocl2_for_gcn14() &&
          getGPUArchitectureFromDeviceType(devtype)==GPUArchitecture::GCN1_4)
          devtype = GPUDeviceType::TONGA;
