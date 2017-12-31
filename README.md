@@ -15,8 +15,9 @@ This feature will be not working under same open-source AMDGPU driver or RadeonS
 
 I recommend to read the documentation about the installation (in the `docs` direcrory).
 
-Before building this Mesa3D, you should install CLRadeonExtender 0.1.6 or later
-[http://clrx.nativeboinc.org](http://clrx.nativeboinc.org).
+Before building this Mesa3D, you should install CLRadeonExtender 0.1.6 or later.
+Links to CLRadeonExtender: [http://clrx.nativeboinc.org](http://clrx.nativeboinc.org) or
+[https://github.com/CLRX/CLRX-mirror](https://github.com/CLRX/CLRX-mirror).
 Code of this feature need that package.
 
 After that, you should create configure scripts by using command `./autogen.sh`. You can use
