@@ -401,9 +401,19 @@ namespace clover {
             size_t headerSize = ULEV(mdHdr->size);
             size_t argOffset = headerSize + ULEV(mdHdr->firstNameLength) + 
                      ULEV(mdHdr->secondNameLength)+2;
-            if (ULEV(*(const uint32_t*)(metadata+argOffset)) ==
+            
+            size_t vecTypeHintLength = 0;
+            if (headerSize >= 0x110)
+            {
+               const AmdCL2GPUMetadataHeaderEnd64* hdrEnd =
+                     reinterpret_cast<const AmdCL2GPUMetadataHeaderEnd64*>(
+                        metadata +  0x110 - sizeof(AmdCL2GPUMetadataHeaderEnd64));
+               vecTypeHintLength = ULEV(hdrEnd->vecTypeHintLength);
+            }
+            if (vecTypeHintLength!=0 ||
+               ULEV(*(const uint32_t*)(metadata+argOffset)) ==
                         (sizeof(AmdCL2GPUKernelArgEntry64)<<8))
-               argOffset++;    // fix for AMD GPUPRO driver (2036.03) */
+               argOffset += vecTypeHintLength + 1;    // fix for AMD GPUPRO driver (2036.03) */
             const AmdCL2GPUKernelArgEntry64* argPtr = reinterpret_cast<
                      const AmdCL2GPUKernelArgEntry64*>(metadata + argOffset);
             
