@@ -19,7 +19,7 @@ This feature has been tested under OpenSUSE 14.2 and a AMDGPU-PRO 17.40 drivers.
 
 I recommend to read the documentation about the installation (in the `docs` direcrory).
 
-Before building this Mesa3D, you should install CLRadeonExtender 0.1.5 or later.
+Before building this Mesa3D, you should install CLRadeonExtender 0.1.7svn or later.
 Links to CLRadeonExtender: [http://clrx.nativeboinc.org](http://clrx.nativeboinc.org) or
 [https://github.com/CLRX/CLRX-mirror](https://github.com/CLRX/CLRX-mirror).
 Code of this feature need that package.
